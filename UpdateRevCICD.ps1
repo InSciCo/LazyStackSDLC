@@ -48,8 +48,43 @@ if($LzReviewAcctNameInput -ne "") {
 }
 $LzReviewAccessRoleProfile = $LzReviewAcctName + "AccessRole"
 
+$LzGitHubRepo = "https://github.com/myorg/myrepo.git"
+$LzGitHubRepoInput = Read-Host "Enter your GitHub Repo URL (example: ${LzGitHubRepo})"
+if($LzGitHubRepoInput -ne "") {
+    $LzGitHubRepo = $LzGitHubRepoInput
+}
+
+$LzCodeBuildReviewCICDStackName="reviewcicd"
+$LzCodeBuildReviewCICDStackNameInput = Read-Host "Enter your ReviewCICD CodeBuild project name (default: ${LzCodeBuildReviewCICDStackName})"
+if($LzCodeBuildReviewCICDStackNameInput -ne "") {
+    $LzCodeBuildReviewCICDStackName = $LzCodeBuildReviewCICDStackNameInput
+}
+
+$LzCodeBuildReviewDeleteStackName="reviewdelete"
+$LzCodeBuildReviewDeleteStackNameInput = Read-Host "Enter your ReviewDelete CodeBuild project name (default: ${LzCodeBuildReviewDeleteStackName})"
+if($LzCodeBuildReviewDeleteStackNameInput -ne "") {
+    $LzCodeBuildReviewDeleteStackName = $LzCodeBuildReviewDeleteStackNameInput
+}
+
+Write-Host "Please Review and confirm the following:"
+Write-Host "    OrgCode: $LzOrgCode"
+Write-Host "    AWS CLI Management Account Profile: $LzMgmtProfile"
+Write-Host "    AWS Region: ${LzRegion}"
+Write-Host "    Review Account name: ${LzReviewAcctName}"
+Write-Host "    GitHub Repo URL: ${LzGitHubRepo}"
+Write-Host "    ReviewCICD CodeBuild project name: ${LzCodeBuildReviewCICDStackName}"
+Write-Host "    ReviewDelete CodeBuild project name: ${LzCodeBuildReviewDeleteStackName}"
+
+$LzContinue = (Read-Host "Continue y/n") 
+if($LzContinue -ne "y") {
+    Write-Host "Exiting"
+    Exit
+}
+Write-Host ""
+Write-Host "Processing Starting"
+
 # Review Account
 Write-Host "Deploying ReviewCICD AWS CodeBuild project to ${LzReviewAcctName} account."
-sam deploy --stack-name reviewcicd -t RevCICD.yaml --capabilities CAPABILITY_NAMED_IAM --profile $LzReviewAccessRoleProfile --region $LzRegion
+sam deploy --stack-name $LzCodeBuildReviewCICDStackName -t RevCICD.yaml --capabilities CAPABILITY_NAMED_IAM --parameter-overrides GitHubRepoParam=$LzGitHubRepo  --profile $LzReviewAccessRoleProfile --region $LzRegion
 Write-Host "Deploying ReviewDelete AWS CodeBuild project to ${LzReviewAcctName} account."
-sam deploy --stack-name reviewdelete -t RevDelete.yaml --capabilities CAPABILITY_NAMED_IAM --profile $LzReviewAccessRoleProfile --region $LzRegion
+sam deploy --stack-name $LzCodeBuildReviewDeleteStackName -t RevDelete.yaml --capabilities CAPABILITY_NAMED_IAM --parameter-overrides GitHubRepoParam=$LzGitHubRepo  --profile $LzReviewAccessRoleProfile --region $LzRegion

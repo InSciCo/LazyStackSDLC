@@ -48,6 +48,34 @@ if($LzProdAcctNameInput -ne "") {
 }
 $LzProdAccessRoleProfile = $LzProdAcctName + "AccessRole"
 
+$LzGitHubRepo = "https://github.com/myorg/myrepo.git"
+$LzGitHubRepoInput = Read-Host "Enter your GitHub Repo URL (example: ${LzGitHubRepo})"
+if($LzGitHubRepoInput -ne "") {
+    $LzGitHubRepo = $LzGitHubRepoInput
+}
+
+$LzCodeBuildProdCICDStackName="prodcicd"
+$LzCodeBuildProdCICDStackNameInput = Read-Host "Enter your ProdCICD CodeBuild project name (default: ${LzCodeBuildProdCICDStackName})"
+if($LzCodeBuildProdCICDStackNameInput -ne "") {
+    $LzCodeBuildProdCICDStackName = $LzCodeBuildProdCICDStackNameInput
+}
+
+Write-Host "Please Review and confirm the following:"
+Write-Host "    OrgCode: $LzOrgCode"
+Write-Host "    AWS CLI Management Account Profile: $LzMgmtProfile"
+Write-Host "    AWS Region: ${LzRegion}"
+Write-Host "    Prod Account name: ${LzProdAcctName}"
+Write-Host "    GitHub Repo URL: ${LzGitHubRepo}"
+Write-Host "    ProdCICD CodeBuild project name: ${LzCodeBuildProdCICDStackName}"
+
+$LzContinue = (Read-Host "Continue y/n") 
+if($LzContinue -ne "y") {
+    Write-Host "Exiting"
+    Exit
+}
+Write-Host ""
+Write-Host "Processing Starting"
+
 # Prod Account
 Write-Host "Deploying ProdCICD AWS CodeBuild project to ${LzProdAcctName} account."
-sam deploy --stack-name prodcicd -t ProdCICD.yaml --capabilities CAPABILITY_NAMED_IAM --profile $LzProdAccessRoleProfile --region $LzRegion
+sam deploy --stack-name $LzCodeBuildProdCICDStackName -t ProdCICD.yaml --capabilities CAPABILITY_NAMED_IAM  --parameter-overrides GitHubRepoParam=$LzGitHubRepo --profile $LzProdAccessRoleProfile --region $LzRegion

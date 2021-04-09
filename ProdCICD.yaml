@@ -1,5 +1,10 @@
 AWSTemplateFormatVersion: "2010-09-09"
 Description: Template creates Codebuild resources for a simple SAM Application
+Parameters:
+  GitHubRepoParam:
+    Type: String
+    Description: Enter the GitHub URL for the repo
+
 Resources:
   S3:
     Type: "AWS::S3::Bucket"
@@ -25,7 +30,7 @@ Resources:
         Image: aws/codebuild/standard:5.0
       SourceVersion: "main"
       Source:
-        Location: https://github.com/tmay57/PetStore.git
+        Location: !Ref GitHubRepoParam
         Type: GITHUB
         GitCloneDepth: 1
         BuildSpec: !Sub |
