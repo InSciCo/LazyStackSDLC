@@ -1,7 +1,5 @@
-Write-Host "InstallCICD.ps1 - V1.0.0"
-Write-Host "This script adds CodeBuild Projects to the Review and Prod accounts to implement CI/CD."
-Write-Host "This script assumes you have created an organization with Dev, Review and Prod accounts"
-Write-Host "using the other scripts provided in this project."
+Write-Host "UpdateRevCICD.ps1 - V1.0.0"
+Write-Host "This script updates the CodeBuild Projects in the Review account."
 Write-Host "Note: Press return to accept a default value."
 
 $LzOrgCode = (Read-Host "Enter your OrgCode")
@@ -50,20 +48,8 @@ if($LzReviewAcctNameInput -ne "") {
 }
 $LzReviewAccessRoleProfile = $LzReviewAcctName + "AccessRole"
 
-$LzProdAcctName = "${LzOrgCode}Prod"
-$LzProdAcctNameInput = Read-Host "Enter the Prod Account Name (default: ${LzProdAcctName})"
-if($LzProdAcctNameInput -ne "") {
-    $LzProdAcctName = $LzProdAcctNameInput
-}
-$LzProdAccessRoleProfile = $LzProdAcctName + "AccessRole"
-
 # Review Account
 Write-Host "Deploying ReviewCICD AWS CodeBuild project to ${LzReviewAcctName} account."
 sam deploy --stack-name reviewcicd -t RevCICD.yaml --capabilities CAPABILITY_NAMED_IAM --profile $LzReviewAccessRoleProfile --region $LzRegion
 Write-Host "Deploying ReviewDelete AWS CodeBuild project to ${LzReviewAcctName} account."
 sam deploy --stack-name reviewdelete -t RevDelete.yaml --capabilities CAPABILITY_NAMED_IAM --profile $LzReviewAccessRoleProfile --region $LzRegion
-
-# Prod Account
-Write-Host "Deploying ProdCICD AWS CodeBuild project to ${LzProdAcctName} account."
-sam deploy --stack-name prodcicd -t ProdCICD.yaml --capabilities CAPABILITY_NAMED_IAM --profile $LzProdAccessRoleProfile --region $LzRegion
-
