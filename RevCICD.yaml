@@ -1,0 +1,221 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: Template creates Codebuild resources for a simple SAM Application
+Resources:
+  S3:
+    Type: "AWS::S3::Bucket"
+    Properties: 
+      BucketName: !Sub "${AWS::StackName}"
+
+  CodeBuild:
+    Type: AWS::CodeBuild::Project
+    Properties:
+      Name: !Sub "${AWS::StackName}"
+      Description: Build process for .NET Serverless Application
+      ServiceRole: !GetAtt CodeBuildRole.Arn
+      Artifacts:
+        Type: S3
+        Location: !Ref S3
+        Name: !Sub "${AWS::StackName}-build-artifacts"
+        Path: ''
+        NamespaceType: NONE
+        Packaging: NONE
+      Environment:
+        Type: LINUX_CONTAINER
+        ComputeType: BUILD_GENERAL1_SMALL
+        Image: aws/codebuild/standard:5.0
+      Source:
+        Location: https://github.com/tmay57/PetStore.git
+        Type: GITHUB
+        GitCloneDepth: 1
+        BuildSpec: !Sub |
+          version: 0.2
+          phases:
+            build:
+              commands:
+                - cat Ping.txt
+                - echo $CODEBUILD_SOURCE_VERSION
+                - echo $CODEBUILD_WEBHOOK_BASE_REF
+                - echo $CODEBUILD_WEBHOOK_HEAD_REF
+                - echo $CODEBUILD_WEBHOOK_TRIGGER
+                # stack names can not include / characters so we replace with -
+                - stack=$(echo $CODEBUILD_WEBHOOK_TRIGGER | sed 's/\//-/g')
+                - echo $stack
+                - dotnet build --configuration Release
+                # ${S3} is replaced during cloudformation template processing with S3 name
+                # $stack is replaced by csh
+                - eval "sam deploy -t Stacks/Rev/serverless.template --stack-name $stack --s3-bucket ${S3} --capabilities CAPABILITY_NAMED_IAM --region ${AWS::Region}"
+      Triggers:
+        Webhook: true
+        FilterGroups:
+          - - Type: EVENT
+              Pattern: PULL_REQUEST_CREATED,PULL_REQUEST_UPDATED
+              ExcludeMatchedPattern: false
+      BadgeEnabled: false
+      LogsConfig:
+        CloudWatchLogs: 
+          Status: ENABLED
+        S3Logs:
+          Status: DISABLED
+          EncryptionDisabled: false
+      TimeoutInMinutes: 10
+  CodeBuildRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub "CodeBuildRole-${AWS::StackName}"
+      Description: Provides Codebuild permission to access API GW, Lambda and Cloudformation
+      #Provide Codebuild permission to assume this role
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          Effect: "Allow"
+          Principal:
+            Service: "codebuild.amazonaws.com"
+          Action: "sts:AssumeRole"
+
+  # This can be restricted more
+  CodeBuildPolicy:
+    Type: "AWS::IAM::Policy"
+    Properties:
+      PolicyName: !Sub "CodeBuildPolicy-${AWS::StackName}"
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Action:
+              - 'cognito-idp:*'
+            Resource:
+              - "*"
+
+          - Effect: Allow
+            Action:
+              - 'cognito-identity:*'
+            Resource:
+              - "*"
+
+          - Effect: Allow
+            Action:
+              - 'dynamodb:UpdateTable'
+              - 'dynamodb:DescribeTable'
+              - 'dynamodb:DeleteTable'
+              - 'dynamodb:CreateTable'
+            Resource:
+              - !Sub 'arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/*'
+
+          - Effect: Allow
+            Action:
+              - 'cloudformation:CreateChangeSet'
+            Resource:
+              - 'arn:aws:cloudformation:*:aws:transform/Serverless-2016-10-31'
+
+          - Effect: Allow
+            Action:
+              - 'cloudformation:CreateChangeSet'
+              - 'cloudformation:DeleteStack'
+              - 'cloudformation:DescribeChangeSet'
+              - 'cloudformation:DescribeStackEvents'
+              - 'cloudformation:DescribeStacks'
+              - 'cloudformation:ExecuteChangeSet'
+              - 'cloudformation:GetTemplateSummary'
+            Resource:
+              - !Sub 'arn:aws:cloudformation:*:${AWS::AccountId}:stack/*'
+
+          - Effect: Allow
+            Action:
+              - 's3:CreateBucket'
+              - 's3:GetObject'
+              - 's3:PutObject'
+            Resource:
+              - 'arn:aws:s3:::*/*'
+
+          - Effect: Allow
+            Action:
+              - 'ecr:BatchCheckLayerAvailability'
+              - 'ecr:BatchGetImage'
+              - 'ecr:CompleteLayerUpload'
+              - 'ecr:DescribeImages'
+              - 'ecr:DescribeRepositories'
+              - 'ecr:GetDownloadUrlForLayer'
+              - 'ecr:GetRepositoryPolicy'
+              - 'ecr:InitiateLayerUpload'
+              - 'ecr:ListImages'
+              - 'ecr:PutImage'
+              - 'ecr:SetRepositoryPolicy'
+              - 'ecr:UploadLayerPart'
+            Resource:
+              - !Sub 'arn:aws:ecr:*:${AWS::AccountId}:repository/*'
+
+          - Effect: Allow
+            Action:
+              - 'ecr:GetAuthorizationToken'
+            Resource:
+              - '*'
+
+          - Effect: Allow
+            Action:
+              - 'lambda:AddPermission'
+              - 'lambda:CreateFunction'
+              - 'lambda:DeleteFunction'
+              - 'lambda:GetFunction'
+              - 'lambda:GetFunctionConfiguration'
+              - 'lambda:ListTags'
+              - 'lambda:RemovePermission'
+              - 'lambda:TagResource'
+              - 'lambda:UntagResource'
+              - 'lambda:UpdateFunctionCode'
+              - 'lambda:UpdateFunctionConfiguration'
+            Resource:
+              - !Sub 'arn:aws:lambda:*:${AWS::AccountId}:function:*'
+
+          - Effect: Allow
+            Action:
+              - 'iam:AttachRolePolicy'
+              - 'iam:CreateRole'
+              - 'iam:DeleteRole'
+              - 'iam:DeleteRolePolicy'
+              - 'iam:DetachRolePolicy'
+              - 'iam:GetRole'
+              - 'iam:GetRolePolicy'
+              - 'iam:PutRolePolicy'
+              - 'iam:PassRole'
+              - 'iam:TagRole'
+            Resource:
+              - !Sub 'arn:aws:iam::${AWS::AccountId}:role/*'
+
+          - Effect: Allow
+            Action:
+              - 'apigateway:*'
+            Resource:
+              - !Sub 'arn:aws:apigateway:*:*:/*'
+
+          - Effect: Allow
+            Action:
+              - 'logs:DescribeQueries'
+              - 'logs:GetLogRecord'
+              - 'logs:PutDestinationPolicy'
+              - 'logs:StopQuery'
+              - 'logs:TestMetricFilter'
+              - 'logs:DeleteDestination'
+              - 'logs:GetLogDelivery'
+              - 'logs:ListLogDeliveries'
+              - 'logs:CreateLogDelivery'
+              - 'logs:DeleteResourcePolicy'
+              - 'logs:PutResourcePolicy'
+              - 'logs:DescribeExportTasks'
+              - 'logs:GetQueryResults'
+              - 'logs:UpdateLogDelivery'
+              - 'logs:CancelExportTask'
+              - 'logs:DeleteLogDelivery'
+              - 'logs:PutDestination'
+              - 'logs:DescribeResourcePolicies'
+              - 'logs:DescribeDestinations'
+            Resource: '*'
+
+          - Effect: Allow
+            Action: 'logs:*'
+            Resource: !Sub 'arn:aws:logs:*:${AWS::AccountId}:log-group:*'
+
+          - Effect: Allow
+            Action: 'logs:*'
+            Resource: !Sub 'arn:aws:logs:*:${AWS::AccountId}:log-group:*:log-stream:*'
+      Roles:
+        -  !Ref CodeBuildRole
