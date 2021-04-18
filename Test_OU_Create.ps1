@@ -1,5 +1,5 @@
-Write-Host "CreateOrganization.ps1 - V1.0.0"
-Write-Host "This script creates an Organization and Organizational Units for Dev, Review and Prod."
+Write-Host "Test_OU_Create.ps1 - V1.0.0"
+Write-Host "This script creates an Organizational Units for Test stacks."
 Write-Host "Note: Press return to accept a default value."
 $LzOrgCode = (Read-Host "Enter your OrgCode")
 do {
@@ -27,12 +27,8 @@ Write-Host "    OrgCode: ${LzOrgCode}"
 
 Write-Host "    Management Account Profile: ${LzMgmtProfile}"
 Write-Host "    AWS Organizatinal Units to be created:"
-$LzDevOUName = $LzOrgCode + "DevOU"
-Write-Host "        - ${LzDevOUName}"
-$LzRevOUName = $LzOrgCode + "RevOU"
-Write-Host "        - ${LzRevOUName}"
-$LzProdOUName = $LzOrgCode + "ProdOU"
-Write-Host "        - ${LzProdOUName}"
+$LzTestOUName = $LzOrgCode + "TestOU"
+Write-Host "        - ${LzTestOUName}"
 
 $LzContinue = (Read-Host "Continue y/n")
 if($LzContinue -ne "y") {
@@ -42,12 +38,6 @@ if($LzContinue -ne "y") {
 Write-Host ""
 Write-Host "Processing Starting"
 
-
-# Create organization
-# Reference: https://awscli.amazonaws.com/v2/documentation/api/latest/reference/organizations/create-organization.html
-Write-Host "Creating Organization."
-$null = aws organizations create-organization --profile $LzMgmtProfile
-
 # Get LzRootId - note: Currently, there should only ever be one root.
 # Reference: https://awscli.amazonaws.com/v2/documentation/api/latest/reference/organizations/list-roots.html
 $LzRoots = aws organizations list-roots --profile $LzMgmtProfile | ConvertFrom-Json
@@ -56,19 +46,9 @@ $LzRootId = $LzRoots.Roots[0].Id
 Write-Host "Creating Organizational Units:"
 # Reference: https://awscli.amazonaws.com/v2/documentation/api/latest/reference/organizations/create-organizational-unit.html
 
-# Create Organization Unit for Dev
-$LzDevOU = aws organizations create-organizational-unit --parent-id $LzRootId --name $LzDevOUName  --profile $LzMgmtProfile | ConvertFrom-Json
-$null = $LzDevOU.OrganizationalUnit.Id 
-Write-Host "    - ${LzDevOUName} created"
-
-# Create Organization Unit for Review
-$LzRevOU = aws organizations create-organizational-unit --parent-id $LzRootId --name $LzRevOUName  --profile $LzMgmtProfile | ConvertFrom-Json
-$null = $LzRevOU.OrganizationalUnit.Id 
-Write-Host "    - ${LzRevOUName} created"
-
-# Create Organization Unit for Prod
-$LzProdOU = aws organizations create-organizational-unit --parent-id $LzRootId --name $LzProdOUName  --profile $LzMgmtProfile | ConvertFrom-Json
-$null = $LzProdOU.OrganizationalUnit.Id 
-Write-Host "    - ${LzProdOUName} created"
+# Create Organization Unit for Test
+$LzTestOU = aws organizations create-organizational-unit --parent-id $LzRootId --name $LzTestOUName  --profile $LzMgmtProfile | ConvertFrom-Json
+$null = $LzTestOU.OrganizationalUnit.Id 
+Write-Host "    - ${LzTestOUName} created"
 
 Write-Host "Processing Complete"

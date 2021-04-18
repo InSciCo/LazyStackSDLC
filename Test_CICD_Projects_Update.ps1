@@ -1,5 +1,5 @@
-Write-Host "UpdateRevCICD.ps1 - V1.0.0"
-Write-Host "This script updates the CodeBuild Projects in the Review account."
+Write-Host "Test_CICD_Projects_Update.ps1 - V1.0.0"
+Write-Host "This script updates the CodeBuild Projects in the Test account."
 Write-Host "Note: Press return to accept a default value."
 
 $LzOrgCode = (Read-Host "Enter your OrgCode")
@@ -41,12 +41,12 @@ if($LzRegionInput -ne "") {
     $LzRegion = $LzRegionInput
 }
 
-$LzReviewAcctName = "${LzOrgCode}Rev"
-$LzReviewAcctNameInput = Read-Host "Enter the Review Account Name (default: ${LzReviewAcctName})"
-if($LzReviewAcctNameInput -ne "") {
-    $LzReviewAcctName = $LzReviewAcctNameInput
+$LzTestAcctName = "${LzOrgCode}Rev"
+$LzTestAcctNameInput = Read-Host "Enter the Test Account Name (default: ${LzTestAcctName})"
+if($LzTestAcctNameInput -ne "") {
+    $LzTestAcctName = $LzTestAcctNameInput
 }
-$LzReviewAccessRoleProfile = $LzReviewAcctName + "AccessRole"
+$LzTestAccessRoleProfile = $LzTestAcctName + "AccessRole"
 
 $LzGitHubRepo = "https://github.com/myorg/myrepo.git"
 $LzGitHubRepoInput = Read-Host "Enter your GitHub Repo URL (example: ${LzGitHubRepo})"
@@ -54,26 +54,26 @@ if($LzGitHubRepoInput -ne "") {
     $LzGitHubRepo = $LzGitHubRepoInput
 }
 
-$LzCodeBuildReviewCICDStackName="reviewcicd"
-$LzCodeBuildReviewCICDStackNameInput = Read-Host "Enter your ReviewCICD CodeBuild project name (default: ${LzCodeBuildReviewCICDStackName})"
-if($LzCodeBuildReviewCICDStackNameInput -ne "") {
-    $LzCodeBuildReviewCICDStackName = $LzCodeBuildReviewCICDStackNameInput
+$LzCodeBuildTestCICDStackName="Testcicd"
+$LzCodeBuildTestCICDStackNameInput = Read-Host "Enter your TestCICD CodeBuild project name (default: ${LzCodeBuildTestCICDStackName})"
+if($LzCodeBuildTestCICDStackNameInput -ne "") {
+    $LzCodeBuildTestCICDStackName = $LzCodeBuildTestCICDStackNameInput
 }
 
-$LzCodeBuildReviewDeleteStackName="reviewdelete"
-$LzCodeBuildReviewDeleteStackNameInput = Read-Host "Enter your ReviewDelete CodeBuild project name (default: ${LzCodeBuildReviewDeleteStackName})"
-if($LzCodeBuildReviewDeleteStackNameInput -ne "") {
-    $LzCodeBuildReviewDeleteStackName = $LzCodeBuildReviewDeleteStackNameInput
+$LzCodeBuildTestDeleteStackName="Testdelete"
+$LzCodeBuildTestDeleteStackNameInput = Read-Host "Enter your TestDelete CodeBuild project name (default: ${LzCodeBuildTestDeleteStackName})"
+if($LzCodeBuildTestDeleteStackNameInput -ne "") {
+    $LzCodeBuildTestDeleteStackName = $LzCodeBuildTestDeleteStackNameInput
 }
 
 Write-Host "Please Review and confirm the following:"
 Write-Host "    OrgCode: $LzOrgCode"
 Write-Host "    AWS CLI Management Account Profile: $LzMgmtProfile"
 Write-Host "    AWS Region: ${LzRegion}"
-Write-Host "    Review Account name: ${LzReviewAcctName}"
+Write-Host "    Test Account name: ${LzTestAcctName}"
 Write-Host "    GitHub Repo URL: ${LzGitHubRepo}"
-Write-Host "    ReviewCICD CodeBuild project name: ${LzCodeBuildReviewCICDStackName}"
-Write-Host "    ReviewDelete CodeBuild project name: ${LzCodeBuildReviewDeleteStackName}"
+Write-Host "    TestCICD CodeBuild project name: ${LzCodeBuildTestCICDStackName}"
+Write-Host "    TestDelete CodeBuild project name: ${LzCodeBuildTestDeleteStackName}"
 
 $LzContinue = (Read-Host "Continue y/n") 
 if($LzContinue -ne "y") {
@@ -83,8 +83,8 @@ if($LzContinue -ne "y") {
 Write-Host ""
 Write-Host "Processing Starting"
 
-# Review Account
-Write-Host "Deploying ReviewCICD AWS CodeBuild project to ${LzReviewAcctName} account."
-sam deploy --stack-name $LzCodeBuildReviewCICDStackName -t RevCICD.yaml --capabilities CAPABILITY_NAMED_IAM --parameter-overrides GitHubRepoParam=$LzGitHubRepo  --profile $LzReviewAccessRoleProfile --region $LzRegion
-Write-Host "Deploying ReviewDelete AWS CodeBuild project to ${LzReviewAcctName} account."
-sam deploy --stack-name $LzCodeBuildReviewDeleteStackName -t RevDelete.yaml --capabilities CAPABILITY_NAMED_IAM --parameter-overrides GitHubRepoParam=$LzGitHubRepo  --profile $LzReviewAccessRoleProfile --region $LzRegion
+# Test Account
+Write-Host "Deploying TestCICD AWS CodeBuild project to ${LzTestAcctName} account."
+sam deploy --stack-name $LzCodeBuildTestCICDStackName -t RevCICD.yaml --capabilities CAPABILITY_NAMED_IAM --parameter-overrides GitHubRepoParam=$LzGitHubRepo  --profile $LzTestAccessRoleProfile --region $LzRegion
+Write-Host "Deploying TestDelete AWS CodeBuild project to ${LzTestAcctName} account."
+sam deploy --stack-name $LzCodeBuildTestDeleteStackName -t RevDelete.yaml --capabilities CAPABILITY_NAMED_IAM --parameter-overrides GitHubRepoParam=$LzGitHubRepo  --profile $LzTestAccessRoleProfile --region $LzRegion

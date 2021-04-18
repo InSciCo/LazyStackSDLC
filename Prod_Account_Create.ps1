@@ -1,5 +1,5 @@
 
-Write-Host "CreateProdAcct.ps1 - V1.0.0"
+Write-Host "Prod_Account_Create.ps1 - V1.0.0"
 Write-Host "This script adds a production account to the Prod Organizational Unit."
 Write-Host "It also adds a Admin Access Profile so this workstation can administer the new Account."
 Write-Host "Note: Press return to accept a default value."
