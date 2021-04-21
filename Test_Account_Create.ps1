@@ -104,7 +104,7 @@ $LzRoots = aws organizations list-roots --profile $LzMgmtProfile | ConvertFrom-J
 $LzRootId = $LzRoots.Roots[0].Id 
 
 # Get Organizational Unit
-$LzOrgUnitsList = aws organizations list-organizational-units-for-parent --parent-id r-1qdt --profile $LzMgmtProfile | ConvertFrom-Json
+$LzOrgUnitsList = aws organizations list-organizational-units-for-parent --parent-id $LzRootId --profile $LzMgmtProfile | ConvertFrom-Json
 if($? -eq $false) {
     Write-Host "Could not find ${$Lz} Organizational Unit"
     Exit
