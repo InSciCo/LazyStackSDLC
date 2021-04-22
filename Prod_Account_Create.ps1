@@ -106,7 +106,7 @@ $LzRootId = $LzRoots.Roots[0].Id
 # Get Organizational Unit
 $LzOrgUnitsList = aws organizations list-organizational-units-for-parent --parent-id $LzRootId --profile $LzMgmtProfile | ConvertFrom-Json
 if($? -eq $false) {
-    Write-Host "Could not find ${$Lz} Organizational Unit"
+    Write-Host "Could not find ${LzOUName} Organizational Unit"
     Exit
 }
 if($LzOrgUnitsList.OrganizationalUnits.Count -eq 0) {
@@ -117,7 +117,7 @@ if($LzOrgUnitsList.OrganizationalUnits.Count -eq 0) {
 $LzOrgUnit = $LzOrgUnitsList.OrganizationalUnits | Where-Object Name -eq $LzOUName
 if($? -eq $false)
 {
-    Write-Host "Could not find ${$Lz} Organizational Unit"
+    Write-Host "Could not find ${LzOUName} Organizational Unit"
     Exit
 }
 
