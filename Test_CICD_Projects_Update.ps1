@@ -86,5 +86,6 @@ Write-Host "Processing Starting"
 # Test Account
 Write-Host "Deploying TestCICD AWS CodeBuild project to ${LzTestAcctName} account."
 sam deploy --stack-name $LzCodeBuildTestCICDStackName -t RevCICD.yaml --capabilities CAPABILITY_NAMED_IAM --parameter-overrides GitHubRepoParam=$LzGitHubRepo  --profile $LzTestAccessRoleProfile --region $LzRegion
+
 Write-Host "Deploying TestDelete AWS CodeBuild project to ${LzTestAcctName} account."
 sam deploy --stack-name $LzCodeBuildTestDeleteStackName -t RevDelete.yaml --capabilities CAPABILITY_NAMED_IAM --parameter-overrides GitHubRepoParam=$LzGitHubRepo  --profile $LzTestAccessRoleProfile --region $LzRegion
