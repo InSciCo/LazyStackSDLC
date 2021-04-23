@@ -153,7 +153,7 @@ Write-Host "    - ${LzAcctName} account creation successful. AccountId: ${LzAcct
 # Move new Account to OU
 # Reference: https://awscli.amazonaws.com/v2/documentation/api/latest/reference/organizations/move-account.html
 Write-Host "    - Moving ${LzAcctName} account to ${LzOUName} organizational unit"
-aws organizations move-account --account-id $LzAcctId --source-parent-id $LzRootId --destination-parent-id $LzOrgUnitId --profile $LzMgmtProfile
+$null = aws organizations move-account --account-id $LzAcctId --source-parent-id $LzRootId --destination-parent-id $LzOrgUnitId --profile $LzMgmtProfile
 
 <# 
 Reference: https://docs.aws.amazon.com/organizations/latest/userguide/orgs_manage_accounts_access.html
@@ -173,29 +173,29 @@ We use the aws configure command to set this up.
 # Reference: https://awscli.amazonaws.com/v2/documentation/api/latest/reference/configure/set.html
 $LzAccessRoleProfile = $LzAcctName + "AccessRole"
 Write-Host "Adding ${LzAccessRole} profile and associating it with the ${LzMgmtAcct} profile. "
-aws configure set role_arn arn:aws:iam::${LzAcctId}:role/OrganizationAccountAccessRole --profile $LzAccessRoleProfile
-aws configure set source_profile $LzMgmtProfile --profile $LzAccessRoleProfile
+$null = aws configure set role_arn arn:aws:iam::${LzAcctId}:role/OrganizationAccountAccessRole --profile $LzAccessRoleProfile
+$null = aws configure set source_profile $LzMgmtProfile --profile $LzAccessRoleProfile
 
 # Create Developers Group for Developers Account
 # Reference: https://docs.aws.amazon.com/cli/latest/userguide/cli-services-iam-new-user-group.html
 Write-Host "Creating Developers group in the ${LzAcctName} account."
-aws iam create-group --group-name Developers --profile $LzAccessRoleProfile
+$null = aws iam create-group --group-name Developers --profile $LzAccessRoleProfile
 
 # Add policies to Group
 # PowerUserAccess
 Write-Host "    - Adding policy PowerUserAccess"
 $LzGroupPolicyArn = aws iam list-policies --query 'Policies[?PolicyName==`PowerUserAccess`].{ARN:Arn}' --output text --profile $LzAccessRoleProfile 
-aws iam attach-group-policy --group-name Developers --policy-arn $LzGroupPolicyArn --profile $LzAccessRoleProfile
+$null = aws iam attach-group-policy --group-name Developers --policy-arn $LzGroupPolicyArn --profile $LzAccessRoleProfile
 
 # IAMUserCredsPolicy
 Write-Host "    - Adding policy IAMUserCredsPolicy"
 $LzGroupPolicyArn = aws iam list-policies --query 'Policies[?PolicyName==`IAMUserCredsPolicy`].{ARN:Arn}' --output text --profile $LzAccessRoleProfile
-if($? -eq $false)
+if($LzGroupPolicyArn -eq $null)
 {
-    $LzGroupPolicy = aws iam create-policy --policy-name IAMUserCredsPolicy --policy-document IAMUserCredsPolicy.json --profile $LzAccessRoleProfile | CovertFrom-Json
+    $LzGroupPolicy = aws iam create-policy --policy-name IAMUserCredsPolicy --policy-document file://IAMUserCredsPolicy.json --profile $LzAccessRoleProfile | ConvertFrom-Json
     $LzGroupPolicyArn = $LzGroupPolicy.Policy.Arn
 }
-aws iam attach-group-policy --group-name Developers --policy-arn $LzGroupPolicyArn --profile $LzAccessRoleProfile
+$null = aws iam attach-group-policy --group-name Developers --policy-arn $LzGroupPolicyArn --profile $LzAccessRoleProfile
 
 # Create User in Account
 # Reference: https://awscli.amazonaws.com/v2/documentation/api/latest/reference/iam/create-user.html
@@ -203,11 +203,11 @@ Write-Host "Creating IAM User ${LzIAMUserName} in ${LzAcctName} account."
 $null = aws iam create-user --user-name $LzIAMUserName --profile $LzAccessRoleProfile | ConvertFrom-Json
 # Reference: https://docs.aws.amazon.com/cli/latest/userguide/cli-services-iam-new-user-group.html
 $LzPassword = "" + (Get-Random -Minimum 10000 -Maximum 99999 ) + "aA!"
-aws iam create-login-profile --user-name $LzIAMUserName --password $LzPassword --password-reset-required --profile $LzAccessRoleProfile
+$null = aws iam create-login-profile --user-name $LzIAMUserName --password $LzPassword --password-reset-required --profile $LzAccessRoleProfile
 
 # Add user to Group 
 Write-Host "    - Adding the IAM User ${LzIAMUserName} to the Developers group in the ${LzAcctName} account."
-aws iam add-user-to-group --user-name $LzIAMUserName --group-name Developers --profile $LzAccessRoleProfile
+$null = aws iam add-user-to-group --user-name $LzIAMUserName --group-name Developers --profile $LzAccessRoleProfile
 
 # Output Developer Account Creds
 Write-Host "    - Writing the IAM User Creds into ${LzIAMUserName}_welcome.txt"
@@ -217,7 +217,7 @@ $LzOut = "Account Name: ${LzAcctName}${nl}"  `
 + "IAM User: ${LzIAMUserName}${nl}" `
 + "Password: ${LzPassword}${nl}" 
 
-$LzOut > ${LzUser}_welcome.txt
+$LzOut > ${LzIAMUserName}_welcome.txt
 
 Write-Host "Processing Complete"
 

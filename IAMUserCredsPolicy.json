@@ -6,7 +6,8 @@
             "Effect": "Allow",
             "Action": [
                 "iam:GetAccountPasswordPolicy",
-                "iam:GetAccountSummary"
+                "iam:GetAccountSummary",
+                "iam:ListUsers"
             ],
             "Resource": "*"
         },
@@ -15,7 +16,11 @@
             "Effect": "Allow",
             "Action": [
                 "iam:ChangePassword",
-                "iam:GetUser"
+                "iam:GetUser",
+                "iam:CreateLoginProfile",
+                "iam:DeleteLoginProfile",
+                "iam:GetLoginProfile",
+                "iam:UpdateLoginProfile"
             ],
             "Resource": "arn:aws:iam::*:user/${aws:username}"
         },

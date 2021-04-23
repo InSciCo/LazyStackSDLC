@@ -153,7 +153,7 @@ Write-Host "    - ${LzAcctName} account creation successful. AccountId: ${LzAcct
 # Move new Account to OU
 # Reference: https://awscli.amazonaws.com/v2/documentation/api/latest/reference/organizations/move-account.html
 Write-Host "    - Moving ${LzAcctName} account to ${LzOUName} organizational unit"
-aws organizations move-account --account-id $LzAcctId --source-parent-id $LzRootId --destination-parent-id $LzOrgUnitId --profile $LzMgmtProfile
+$null = aws organizations move-account --account-id $LzAcctId --source-parent-id $LzRootId --destination-parent-id $LzOrgUnitId --profile $LzMgmtProfile
 
 <# 
 Reference: https://docs.aws.amazon.com/organizations/latest/userguide/orgs_manage_accounts_access.html
@@ -173,8 +173,8 @@ We use the aws configure command to set this up.
 # Reference: https://awscli.amazonaws.com/v2/documentation/api/latest/reference/configure/set.html
 $LzAccessRoleProfile = $LzAcctName + "AccessRole"
 Write-Host "Adding ${LzAccessRole} profile and associating it with the ${LzMgmtAcct} profile. "
-aws configure set role_arn arn:aws:iam::${LzAcctId}:role/OrganizationAccountAccessRole --profile $LzAccessRoleProfile
-aws configure set source_profile $LzMgmtProfile --profile $LzAccessRoleProfile
+$null = aws configure set role_arn arn:aws:iam::${LzAcctId}:role/OrganizationAccountAccessRole --profile $LzAccessRoleProfile
+$null = aws configure set source_profile $LzMgmtProfile --profile $LzAccessRoleProfile
 
 # Create Administrators Group for Prod Account
 # Reference: https://docs.aws.amazon.com/cli/latest/userguide/cli-services-iam-new-user-group.html
@@ -185,7 +185,7 @@ $null = aws iam create-group --group-name Administrators --profile $LzAccessRole
     # PowerUserAccess
 Write-Host "    - Adding policy AdministratorAccess"
 $LzGroupPolicyArn = aws iam list-policies --query 'Policies[?PolicyName==`AdministratorAccess`].{ARN:Arn}' --output text --profile $LzAccessRoleProfile 
-aws iam attach-group-policy --group-name Administrators --policy-arn $LzGroupPolicyArn --profile $LzAccessRoleProfile
+$null = aws iam attach-group-policy --group-name Administrators --policy-arn $LzGroupPolicyArn --profile $LzAccessRoleProfile
 
 # Create User in Account
 # Reference: https://awscli.amazonaws.com/v2/documentation/api/latest/reference/iam/create-user.html
@@ -196,7 +196,7 @@ $null = aws iam create-login-profile --user-name $LzIAMUserName --password $LzIA
 
 # Add user to Group 
 Write-Host "    - Adding the IAM User ${LzIAMUserName} to the Administrators group in the ${LzAcctName} account."
-aws iam add-user-to-group --user-name $LzIAMUserName --group-name Administrators --profile $LzAccessRoleProfile
+$null = aws iam add-user-to-group --user-name $LzIAMUserName --group-name Administrators --profile $LzAccessRoleProfile
 
 # Output Reivew IAM User Creds
 Write-Host "    - Writing the IAM User Creds into ${LzIAMUserName}_welcome.txt"
