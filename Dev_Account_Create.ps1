@@ -182,7 +182,7 @@ Write-Host "Creating Developers group in the ${LzAcctName} account."
 aws iam create-group --group-name Developers --profile $LzAccessRoleProfile
 
 # Add policies to Group
-    # PowerUserAccess
+# PowerUserAccess
 Write-Host "    - Adding policy PowerUserAccess"
 $LzGroupPolicyArn = aws iam list-policies --query 'Policies[?PolicyName==`PowerUserAccess`].{ARN:Arn}' --output text --profile $LzAccessRoleProfile 
 aws iam attach-group-policy --group-name Developers --policy-arn $LzGroupPolicyArn --profile $LzAccessRoleProfile
