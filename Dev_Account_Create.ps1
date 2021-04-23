@@ -216,7 +216,7 @@ $LzOut = "Account Name: ${LzAcctName}${nl}"  `
 + "Account Console: https://${LzAcctId}.signin.aws.amazon.com/console${nl}" `
 + "IAM User: ${LzIAMUserName}${nl}" `
 + "Temporary Password: ${LzPassword}${nl}" `
-+ "Please login, you will be require to reset your password." `
++ "Please login, you will be required to reset your password." `
 + "Please login as soon as possible." `
 + "Follow the Dev profile Setup instructions at https://lazystack.io/installation/installation_awsdevprofilesteps.html"
 
