@@ -187,9 +187,14 @@ Write-Host "    - Adding policy PowerUserAccess"
 $LzGroupPolicyArn = aws iam list-policies --query 'Policies[?PolicyName==`PowerUserAccess`].{ARN:Arn}' --output text --profile $LzAccessRoleProfile 
 aws iam attach-group-policy --group-name Developers --policy-arn $LzGroupPolicyArn --profile $LzAccessRoleProfile
 
-    # IAMUserChangePassword
-Write-Host "    - Adding policy IAMUserChangePassword"
-$LzGroupPolicyArn = aws iam list-policies --query 'Policies[?PolicyName==`IAMUserChangePassword`].{ARN:Arn}' --output text --profile $LzAccessRoleProfile
+# IAMUserCredsPolicy
+Write-Host "    - Adding policy IAMUserCredsPolicy"
+$LzGroupPolicyArn = aws iam list-policies --query 'Policies[?PolicyName==`IAMUserCredsPolicy`].{ARN:Arn}' --output text --profile $LzAccessRoleProfile
+if($? -eq $false)
+{
+    $LzGroupPolicy = aws iam create-policy --policy-name IAMUserCredsPolicy --policy-document IAMUserCredsPolicy.json --profile $LzAccessRoleProfile | CovertFrom-Json
+    $LzGroupPolicyArn = $LzGroupPolicy.Policy.Arn
+}
 aws iam attach-group-policy --group-name Developers --policy-arn $LzGroupPolicyArn --profile $LzAccessRoleProfile
 
 # Create User in Account
