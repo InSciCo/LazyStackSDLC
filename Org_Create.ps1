@@ -1,5 +1,5 @@
 Write-Host "Org_Create.ps1 - V1.0.0"
-Write-Host "This script creates an Organization and an Organizational Unit for Dev."
+Write-Host "This script creates OrgDevOU, OrgTestOU and OrgProdOU"
 Write-Host "Note: Press return to accept a default value."
 $LzOrgCode = (Read-Host "Enter your OrgCode")
 do {
@@ -29,6 +29,10 @@ Write-Host "    Management Account Profile: ${LzMgmtProfile}"
 Write-Host "    AWS Organizatinal Units to be created:"
 $LzDevOUName = $LzOrgCode + "DevOU"
 Write-Host "        - ${LzDevOUName}"
+$LzTestOUName = $LzOrgCode + "TestOU"
+Write-Host "        - ${LzTestOUName}"
+$LzProdOUName = $LzOrgCode + "ProdOU"
+Write-Host "        - ${LzProdOUName}"
 
 $LzContinue = (Read-Host "Continue y/n")
 if($LzContinue -ne "y") {
@@ -49,12 +53,20 @@ $null = aws organizations create-organization --profile $LzMgmtProfile
 $LzRoots = aws organizations list-roots --profile $LzMgmtProfile | ConvertFrom-Json
 $LzRootId = $LzRoots.Roots[0].Id 
 
-Write-Host "Creating Organizational Unit:"
+Write-Host "Creating Organizational Units:"
 # Reference: https://awscli.amazonaws.com/v2/documentation/api/latest/reference/organizations/create-organizational-unit.html
 
 # Create Organization Unit for Dev
 $LzDevOU = aws organizations create-organizational-unit --parent-id $LzRootId --name $LzDevOUName  --profile $LzMgmtProfile | ConvertFrom-Json
 $null = $LzDevOU.OrganizationalUnit.Id 
 Write-Host "    - ${LzDevOUName} created"
+
+$LzTestOU = aws organizations create-organizational-unit --parent-id $LzRootId --name $LzTestOUName  --profile $LzMgmtProfile | ConvertFrom-Json
+$null = $LzTestOU.OrganizationalUnit.Id 
+Write-Host "    - ${LzTestOUName} created"
+
+$LzProdOU = aws organizations create-organizational-unit --parent-id $LzRootId --name $LzProdOUName  --profile $LzMgmtProfile | ConvertFrom-Json
+$null = $LzProdOU.OrganizationalUnit.Id 
+Write-Host "    - ${LzProdOUName} created"
 
 Write-Host "Processing Complete"
