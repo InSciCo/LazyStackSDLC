@@ -1,6 +1,5 @@
-
-Write-Host "Prod_Account_Create.ps1 - V1.0.0"
-Write-Host "This script adds a production account to the Prod Organizational Unit."
+Write-Host "Prod_Account_Create.ps1 - V1.0.1"
+Write-Host "This script adds a Prod account to the Prod Organizational Unit."
 Write-Host "It also adds a Admin Access Profile so this workstation can administer the new Account."
 Write-Host "Note: Press return to accept a default value."
 $LzOrgCode = (Read-Host "Enter your OrgCode")
@@ -43,17 +42,30 @@ if($LzRegionInput -ne "") {
 }
 
 $LzOUName = "${LzOrgCode}ProdOU"
-$LzOUNameInput = Read-Host "Enter the Prod OU Name (default ${LzOUName})"
+$LzOUNameInput = Read-Host "Enter the Production OU Name (default ${LzOUName})"
 if($LzOUNameInput -ne "") {
     $LzOUName = $LzOUNameInput
 }
 
-$LzAcctName = "${LzOrgCode}Prod"
-$LzAcctNameInput = Read-Host "Enter the Prod Account Name (default: ${LzAcctName})"
+do {
+    $LzSysHandle = Read-Host "Enter the System Handle (ex: Pet)"
+    if($LzSysHandle -eq "") {
+        Write-Host "System Handle can't be empty. Please enter a value."
+    }
+}
+until ($LzSysHandle -ne "")
+
+$LzAcctName = "${LzOrgCode}${LzSysHandle}Prod"
+$LzAcctNameInput = Read-Host "Enter the Prod System Account Name (default: ${LzAcctName})"
 if($LzAcctNameInput -ne "") {
     $LzAcctName = $LzAcctNameInput
 }
 
+$LzIAMUserName = "${LzOrgCode}${LzSysHandle}Prod"
+$LzIAMUserNameInput = Read-Host "Enter the Prod IAM User Name (default: ${LzIAMUserName})"
+if($LzIAMUserNameInput -ne "") {
+    $LzIAMUserName = $LzIAMUserNameInput
+}
 
 Write-Host "Note: An email address can only be associated with one AWS Account."
 do {
@@ -69,28 +81,15 @@ do {
 }
 until ($LzEmailOk)
 
-$LzIAMUserName = "${LzOrgCode}Prod"
-$LzIAMUserNameInput = Read-Host "Enter the Prod IAM User Name (default: ${LzIAMUserName})"
-if($LzIAMUserNameInput -ne "") {
-    $LzIAMUserName = $LzIAMUserNameInput
-}
-
-do {
-    $LzIAMUserPassword = Read-Host "Enter the Prod IAM User Password"
-
-}
-until ($LzIAMUserPassword -ne "")
-
 Write-Host "Please Review and confirm the following:"
 Write-Host "    OrgCode: ${LzOrgCode}"
 Write-Host "    Management Account Profile: ${LzMgmtProfile}"
-Write-Host "    Prod OU: ${LzOUName}"
-Write-Host "    Prod Account to be created: ${LzAcctName}"
+Write-Host "    Production OU: ${LzOUName}"
+Write-Host "    Production System Account to be created: ${LzAcctName}"
+Write-Host "    Production IAM User Name: ${LzIAMUserName}"
 Write-Host "    Email Address for Account's Root User: ${LzRootEmail}"
-Write-Host "    Prod Account IAM User: ${LzAcctName}"
-Write-Host "    Reivew Account IAM User Password: ${LzIAMUserPassword}"
 
-$LzContinue = (Read-Host "Continue y/n")
+$LzContinue = (Read-Host "Continue y/n") 
 if($LzContinue -ne "y") {
     Write-Host "Exiting"
     Exit
@@ -124,9 +123,9 @@ if($? -eq $false)
 $LzOrgUnitId = $LzOrgUnit.Id
 
 
-# Create Prod Account  -- this is an async operation so we have to poll for success
+# Create Dev Account  -- this is an async operation so we have to poll for success
 # Reference: https://awscli.amazonaws.com/v2/documentation/api/latest/reference/organizations/create-account.html
-Write-Host "Creating Prod Account: ${LzAcctName}"
+Write-Host "Creating Developer Account: ${LzAcctName}"
 $LzAcct = aws organizations create-account --email $LzRootEmail --account-name $LzAcctName --profile $LzMgmtProfile | ConvertFrom-Json
 $LzAcctId = $LzAcct.CreateAccountStatus.Id
 
@@ -176,38 +175,55 @@ Write-Host "Adding ${LzAccessRole} profile and associating it with the ${LzMgmtA
 $null = aws configure set role_arn arn:aws:iam::${LzAcctId}:role/OrganizationAccountAccessRole --profile $LzAccessRoleProfile
 $null = aws configure set source_profile $LzMgmtProfile --profile $LzAccessRoleProfile
 
-# Create Administrators Group for Prod Account
+# Create Developers Group for Developers Account
 # Reference: https://docs.aws.amazon.com/cli/latest/userguide/cli-services-iam-new-user-group.html
-Write-Host "Creating Administrators group in the ${LzAcctName} account."
-$null = aws iam create-group --group-name Administrators --profile $LzAccessRoleProfile
+Write-Host "Creating Developers group in the ${LzAcctName} account."
+$null = aws iam create-group --group-name Developers --profile $LzAccessRoleProfile
 
 # Add policies to Group
-    # PowerUserAccess
-Write-Host "    - Adding policy AdministratorAccess"
-$LzGroupPolicyArn = aws iam list-policies --query 'Policies[?PolicyName==`AdministratorAccess`].{ARN:Arn}' --output text --profile $LzAccessRoleProfile 
-$null = aws iam attach-group-policy --group-name Administrators --policy-arn $LzGroupPolicyArn --profile $LzAccessRoleProfile
+# PowerUserAccess
+Write-Host "    - Adding policy PowerUserAccess"
+$LzGroupPolicyArn = aws iam list-policies --query 'Policies[?PolicyName==`PowerUserAccess`].{ARN:Arn}' --output text --profile $LzAccessRoleProfile 
+$null = aws iam attach-group-policy --group-name Developers --policy-arn $LzGroupPolicyArn --profile $LzAccessRoleProfile
+
+# IAMUserCredsPolicy
+Write-Host "    - Adding policy IAMUserCredsPolicy"
+$LzGroupPolicyArn = aws iam list-policies --query 'Policies[?PolicyName==`IAMUserCredsPolicy`].{ARN:Arn}' --output text --profile $LzAccessRoleProfile
+if($LzGroupPolicyArn -eq $null)
+{
+    $LzGroupPolicy = aws iam create-policy --policy-name IAMUserCredsPolicy --policy-document file://IAMUserCredsPolicy.json --profile $LzAccessRoleProfile | ConvertFrom-Json
+    $LzGroupPolicyArn = $LzGroupPolicy.Policy.Arn
+}
+$null = aws iam attach-group-policy --group-name Developers --policy-arn $LzGroupPolicyArn --profile $LzAccessRoleProfile
 
 # Create User in Account
 # Reference: https://awscli.amazonaws.com/v2/documentation/api/latest/reference/iam/create-user.html
 Write-Host "Creating IAM User ${LzIAMUserName} in ${LzAcctName} account."
 $null = aws iam create-user --user-name $LzIAMUserName --profile $LzAccessRoleProfile | ConvertFrom-Json
 # Reference: https://docs.aws.amazon.com/cli/latest/userguide/cli-services-iam-new-user-group.html
-$null = aws iam create-login-profile --user-name $LzIAMUserName --password $LzIAMUserPassword --no-password-reset-required --profile $LzAccessRoleProfile
+$LzPassword = "" + (Get-Random -Minimum 10000 -Maximum 99999 ) + "aA!"
+$null = aws iam create-login-profile --user-name $LzIAMUserName --password $LzPassword --password-reset-required --profile $LzAccessRoleProfile
 
 # Add user to Group 
-Write-Host "    - Adding the IAM User ${LzIAMUserName} to the Administrators group in the ${LzAcctName} account."
-$null = aws iam add-user-to-group --user-name $LzIAMUserName --group-name Administrators --profile $LzAccessRoleProfile
+Write-Host "    - Adding the IAM User ${LzIAMUserName} to the Developers group in the ${LzAcctName} account."
+$null = aws iam add-user-to-group --user-name $LzIAMUserName --group-name Developers --profile $LzAccessRoleProfile
 
-# Output Reivew IAM User Creds
+# Output Developer Account Creds
 Write-Host "    - Writing the IAM User Creds into ${LzIAMUserName}_welcome.txt"
 $nl = [Environment]::NewLine
 $LzOut = "Account Name: ${LzAcctName}${nl}"  `
 + "Account Console: https://${LzAcctId}.signin.aws.amazon.com/console${nl}" `
 + "IAM User: ${LzIAMUserName}${nl}" `
-+ "Password: ${LzIAMUserPassword}${nl}" 
++ "Temporary Password: ${LzPassword}${nl}" `
++ "Please login, you will be required to reset your password." `
++ "Please login as soon as possible." `
++ "Follow the Dev profile Setup instructions at https://lazystack.io/installation/installation_awsdevprofilesteps.html"
+
 
 $LzOut > ${LzIAMUserName}_welcome.txt
 
 Write-Host "Processing Complete"
 
-Write-Host "The file contains the URL to login to the AWS Account ${LzAcctName}, IAM User Name, and Password."
+Write-Host "Send the ${LzIAMUserName}_welcome.txt file to the Developer or use it yourself if you are also that developer."
+Write-Host "The file contains the URL to login to the AWS Account ${LzAcctName} and the initial password (password reset"
+Write-Host "required on first login) for the IAM User ${LzIAMUserName}."
