@@ -175,26 +175,16 @@ Write-Host "Adding ${LzAccessRole} profile and associating it with the ${LzMgmtA
 $null = aws configure set role_arn arn:aws:iam::${LzAcctId}:role/OrganizationAccountAccessRole --profile $LzAccessRoleProfile
 $null = aws configure set source_profile $LzMgmtProfile --profile $LzAccessRoleProfile
 
-# Create Developers Group for Developers Account
+# Create Administrators Group for Prod Account
 # Reference: https://docs.aws.amazon.com/cli/latest/userguide/cli-services-iam-new-user-group.html
-Write-Host "Creating Developers group in the ${LzAcctName} account."
-$null = aws iam create-group --group-name Developers --profile $LzAccessRoleProfile
+Write-Host "Creating Administrators group in the ${LzAcctName} account."
+$null = aws iam create-group --group-name Administrators --profile $LzAccessRoleProfile
 
 # Add policies to Group
-# PowerUserAccess
-Write-Host "    - Adding policy PowerUserAccess"
-$LzGroupPolicyArn = aws iam list-policies --query 'Policies[?PolicyName==`PowerUserAccess`].{ARN:Arn}' --output text --profile $LzAccessRoleProfile 
-$null = aws iam attach-group-policy --group-name Developers --policy-arn $LzGroupPolicyArn --profile $LzAccessRoleProfile
-
-# IAMUserCredsPolicy
-Write-Host "    - Adding policy IAMUserCredsPolicy"
-$LzGroupPolicyArn = aws iam list-policies --query 'Policies[?PolicyName==`IAMUserCredsPolicy`].{ARN:Arn}' --output text --profile $LzAccessRoleProfile
-if($LzGroupPolicyArn -eq $null)
-{
-    $LzGroupPolicy = aws iam create-policy --policy-name IAMUserCredsPolicy --policy-document file://IAMUserCredsPolicy.json --profile $LzAccessRoleProfile | ConvertFrom-Json
-    $LzGroupPolicyArn = $LzGroupPolicy.Policy.Arn
-}
-$null = aws iam attach-group-policy --group-name Developers --policy-arn $LzGroupPolicyArn --profile $LzAccessRoleProfile
+    # PowerUserAccess
+Write-Host "    - Adding policy AdministratorAccess"
+$LzGroupPolicyArn = aws iam list-policies --query 'Policies[?PolicyName==`AdministratorAccess`].{ARN:Arn}' --output text --profile $LzAccessRoleProfile 
+$null = aws iam attach-group-policy --group-name Administrators --policy-arn $LzGroupPolicyArn --profile $LzAccessRoleProfile
 
 # Create User in Account
 # Reference: https://awscli.amazonaws.com/v2/documentation/api/latest/reference/iam/create-user.html
