@@ -1,5 +1,5 @@
 Write-Host "Prod_Account_Create.ps1 - V1.0.1"
-Write-Host "This script adds a Prod account to the Prod Organizational Unit."
+Write-Host "This script adds a System Prod account to the Prod Organizational Unit."
 Write-Host "It also adds a Admin Access Profile so this workstation can administer the new Account."
 Write-Host "Note: Press return to accept a default value."
 $LzOrgCode = (Read-Host "Enter your OrgCode")
@@ -123,9 +123,9 @@ if($? -eq $false)
 $LzOrgUnitId = $LzOrgUnit.Id
 
 
-# Create Dev Account  -- this is an async operation so we have to poll for success
+# Create Prod Account  -- this is an async operation so we have to poll for success
 # Reference: https://awscli.amazonaws.com/v2/documentation/api/latest/reference/organizations/create-account.html
-Write-Host "Creating Developer Account: ${LzAcctName}"
+Write-Host "Creating Production Account: ${LzAcctName}"
 $LzAcct = aws organizations create-account --email $LzRootEmail --account-name $LzAcctName --profile $LzMgmtProfile | ConvertFrom-Json
 $LzAcctId = $LzAcct.CreateAccountStatus.Id
 
@@ -195,10 +195,10 @@ $LzPassword = "" + (Get-Random -Minimum 10000 -Maximum 99999 ) + "aA!"
 $null = aws iam create-login-profile --user-name $LzIAMUserName --password $LzPassword --password-reset-required --profile $LzAccessRoleProfile
 
 # Add user to Group 
-Write-Host "    - Adding the IAM User ${LzIAMUserName} to the Developers group in the ${LzAcctName} account."
-$null = aws iam add-user-to-group --user-name $LzIAMUserName --group-name Developers --profile $LzAccessRoleProfile
+Write-Host "    - Adding the IAM User ${LzIAMUserName} to the Administrators group in the ${LzAcctName} account."
+$null = aws iam add-user-to-group --user-name $LzIAMUserName --group-name Administrators --profile $LzAccessRoleProfile
 
-# Output Developer Account Creds
+# Output Prod Account Creds
 Write-Host "    - Writing the IAM User Creds into ${LzIAMUserName}_welcome.txt"
 $nl = [Environment]::NewLine
 $LzOut = "Account Name: ${LzAcctName}${nl}"  `
@@ -206,14 +206,8 @@ $LzOut = "Account Name: ${LzAcctName}${nl}"  `
 + "IAM User: ${LzIAMUserName}${nl}" `
 + "Temporary Password: ${LzPassword}${nl}" `
 + "Please login, you will be required to reset your password." `
-+ "Please login as soon as possible." `
-+ "Follow the Dev profile Setup instructions at https://lazystack.io/installation/installation_awsdevprofilesteps.html"
-
++ "Please login as soon as possible." 
 
 $LzOut > ${LzIAMUserName}_welcome.txt
 
 Write-Host "Processing Complete"
-
-Write-Host "Send the ${LzIAMUserName}_welcome.txt file to the Developer or use it yourself if you are also that developer."
-Write-Host "The file contains the URL to login to the AWS Account ${LzAcctName} and the initial password (password reset"
-Write-Host "required on first login) for the IAM User ${LzIAMUserName}."
