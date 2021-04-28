@@ -37,16 +37,9 @@ Resources:
           phases:
             build:
               commands:
-                - cat Ping.txt
-                - echo $CODEBUILD_SOURCE_VERSION
-                - echo $CODEBUILD_WEBHOOK_BASE_REF
-                - echo $CODEBUILD_WEBHOOK_HEAD_REF
-                - echo $CODEBUILD_WEBHOOK_TRIGGER
                 # stack names can not include / characters so we replace with -
                 - stack=$(echo $CODEBUILD_WEBHOOK_TRIGGER | sed 's/\//-/g')
-                - echo $stack
                 # ${S3} is replaced during cloudformation template processing with S3 name
-                # $stack is replaced by csh
                 - eval "aws cloudformation delete-stack --stack-name $stack"
       Triggers:
         Webhook: true
