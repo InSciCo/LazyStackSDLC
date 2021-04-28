@@ -1,4 +1,4 @@
-Write-Host "Dev_Account_Create.ps1 - V1.0.1"
+Write-Host "Dev_Account_Create.ps1 - V1.0.0"
 Write-Host "This script adds a developer account to the Dev Organizational Unit."
 Write-Host "It also adds a Admin Access Profile so this workstation can administer the new Account."
 Write-Host "Note: Press return to accept a default value."
