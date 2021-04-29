@@ -60,9 +60,9 @@ $LzRootId = $LzRoots.Roots[0].Id
 Write-Host "Creating Organizational Units:"
 # Reference: https://awscli.amazonaws.com/v2/documentation/api/latest/reference/organizations/create-organizational-unit.html
 
-$OuList = aws organizations list-organizational-units-for-parent --parent-id $LzRootId --profile $LzMgmtProfile 
+$OuList = aws organizations list-organizational-units-for-parent --parent-id $LzRootId --profile $LzMgmtProfile | ConvertFrom-Json
 # Create Organization Unit for Dev
-$LzDevOU = $OuList.OrganizationalUnits | Where-Object Name -eq $LzDevOUName | ConvertFrom-Json
+$LzDevOU = $OuList.OrganizationalUnits | Where-Object Name -eq $LzDevOUName
 if($LzDevOu.Count -eq 0){
     $LzDevOU = aws organizations create-organizational-unit --parent-id $LzRootId --name $LzDevOUName  --profile $LzMgmtProfile | ConvertFrom-Json
     if($null -eq $LzDevOU.OrganizationalUnit.Id)
