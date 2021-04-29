@@ -62,7 +62,7 @@ Write-Host "Creating Organizational Units:"
 
 $OuList = aws organizations list-organizational-units-for-parent --parent-id $LzRootId --profile $LzMgmtProfile | ConvertFrom-Json
 # Create Organization Unit for Dev
-$LzDevOU = $OuList.OrganizationalUnits | Where-Object Name -eq $LzDevOUName
+$LzDevOU = $OuList.OrganizationalUnits | Where-Object Name -eq $LzDevOUName | ConvertFrom-Json
 if($LzDevOu.Count -eq 0){
     $LzDevOU = aws organizations create-organizational-unit --parent-id $LzRootId --name $LzDevOUName  --profile $LzMgmtProfile | ConvertFrom-Json
     if($null -eq $LzDevOU.OrganizationalUnit.Id)
@@ -75,7 +75,7 @@ if($LzDevOu.Count -eq 0){
     Write-Host "    - ${LzDevOUName} already exits"
 }
 
-$LzTestOU = $OuList.OrganizationalUnits | Where-Object Name -eq $LzTestOUName
+$LzTestOU = $OuList.OrganizationalUnits | Where-Object Name -eq $LzTestOUName | ConvertFrom-Json
 if($LzTestOu.Count -eq 0){
     $LzTestOU = aws organizations create-organizational-unit --parent-id $LzRootId --name $LzTestOUName  --profile $LzMgmtProfile | ConvertFrom-Json
     if($null -eq $LzTestOU.OrganizationalUnit.Id)
@@ -88,7 +88,7 @@ if($LzTestOu.Count -eq 0){
     Write-Host "    - ${LzTestOUName} already exits"
 }
 
-$LzProdOU = $OuList.OrganizationalUnits | Where-Object Name -eq $LzProdOUName
+$LzProdOU = $OuList.OrganizationalUnits | Where-Object Name -eq $LzProdOUName | ConvertFrom-Json
 if($LzProdOu.Count -eq 0){
     $LzProdOU = aws organizations create-organizational-unit --parent-id $LzRootId --name $LzProdOUName  --profile $LzMgmtProfile | ConvertFrom-Json
     if($null -eq $LzProdOU.OrganizationalUnit.Id)
