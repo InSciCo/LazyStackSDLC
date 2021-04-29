@@ -6,7 +6,7 @@ do {
     $LzMgmtProfile = "${LzOrgcode}Mgmt"
     $LzMgmtProfileInput = (Read-Host "Enter your AWS CLI Management Account Profile (default: ${LzOrgCode}Mgmt)")
     
-    if($LzMgmtProfileInput -eq $null) {
+    if($null -eq $LzMgmtProfileInput) {
         $LzMgmtProfile = $LzMgmtProfileInput
     }
 
@@ -65,7 +65,7 @@ $OuList = aws organizations list-organizational-units-for-parent --parent-id $Lz
 $LzDevOU = $OuList.OrganizationalUnits | Where-Object Name -eq $LzDevOUName
 if($? -eq $false){
     $LzDevOU = aws organizations create-organizational-unit --parent-id $LzRootId --name $LzDevOUName  --profile $LzMgmtProfile | ConvertFrom-Json
-    if($LzDevOU.OrganizationalUnit.Id -eq $null)
+    if($null -eq $LzDevOU.OrganizationalUnit.Id)
     {
         Write-Host "    - ${LzDevOUName} create failed"
     }else{
@@ -78,7 +78,7 @@ if($? -eq $false){
 $LzTestOU = $OuList.OrganizationalUnits | Where-Object Name -eq $LzTestOUName
 if($? -eq $false){
     $LzTestOU = aws organizations create-organizational-unit --parent-id $LzRootId --name $LzTestOUName  --profile $LzMgmtProfile | ConvertFrom-Json
-    if($LzTestOU.OrganizationalUnit.Id -eq $null)
+    if($null -eq $LzTestOU.OrganizationalUnit.Id)
     {
         Write-Host "    - ${LzTestOUName} create failed"
     }else{
@@ -91,7 +91,7 @@ if($? -eq $false){
 $LzProdOU = $OuList.OrganizationalUnits | Where-Object Name -eq $LzProdOUName
 if($? -eq $false){
     $LzProdOU = aws organizations create-organizational-unit --parent-id $LzRootId --name $LzProdOUName  --profile $LzMgmtProfile | ConvertFrom-Json
-    if($LzProdOU.OrganizationalUnit.Id -eq $null)
+    if($null -eq $LzProdOU.OrganizationalUnit.Id)
     {
         Write-Host "    - ${LzProdOUName} create failed"
     }else{

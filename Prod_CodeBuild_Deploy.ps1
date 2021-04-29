@@ -15,7 +15,7 @@ do {
     $LzMgmtProfile = "${LzOrgcode}Mgmt"
     $LzMgmtProfileInput = (Read-Host "Enter your AWS CLI Management Account Profile (default: ${LzOrgCode}Mgmt)")
     
-    if($LzMgmtProfileInput -eq $null) {
+    if($null -eq $LzMgmtProfileInput) {
         $LzMgmtProfile = $LzMgmtProfileInput
     }
  
