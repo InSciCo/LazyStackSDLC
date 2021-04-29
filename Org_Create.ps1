@@ -64,7 +64,7 @@ $OuList = aws organizations list-organizational-units-for-parent --parent-id $Lz
 # Create Organization Unit for Dev
 $LzDevOU = $OuList.OrganizationalUnits | Where-Object Name -eq $LzDevOUName | ConvertFrom-Json
 if($LzDevOu.Count -eq 0){
-    $LzDevOU = aws organizations create-organizational-unit --parent-id $LzRootId --name $LzDevOUName  --profile $LzMgmtProfile | ConvertFrom-Json
+    $LzDevOU = aws organizations create-organizational-unit --parent-id $LzRootId --name $LzDevOUName  --profile $LzMgmtProfile 
     if($null -eq $LzDevOU.OrganizationalUnit.Id)
     {
         Write-Host "    - ${LzDevOUName} create failed"
@@ -77,7 +77,7 @@ if($LzDevOu.Count -eq 0){
 
 $LzTestOU = $OuList.OrganizationalUnits | Where-Object Name -eq $LzTestOUName | ConvertFrom-Json
 if($LzTestOu.Count -eq 0){
-    $LzTestOU = aws organizations create-organizational-unit --parent-id $LzRootId --name $LzTestOUName  --profile $LzMgmtProfile | ConvertFrom-Json
+    $LzTestOU = aws organizations create-organizational-unit --parent-id $LzRootId --name $LzTestOUName  --profile $LzMgmtProfile 
     if($null -eq $LzTestOU.OrganizationalUnit.Id)
     {
         Write-Host "    - ${LzTestOUName} create failed"
@@ -90,7 +90,7 @@ if($LzTestOu.Count -eq 0){
 
 $LzProdOU = $OuList.OrganizationalUnits | Where-Object Name -eq $LzProdOUName | ConvertFrom-Json
 if($LzProdOu.Count -eq 0){
-    $LzProdOU = aws organizations create-organizational-unit --parent-id $LzRootId --name $LzProdOUName  --profile $LzMgmtProfile | ConvertFrom-Json
+    $LzProdOU = aws organizations create-organizational-unit --parent-id $LzRootId --name $LzProdOUName  --profile $LzMgmtProfile 
     if($null -eq $LzProdOU.OrganizationalUnit.Id)
     {
         Write-Host "    - ${LzProdOUName} create failed"
