@@ -60,11 +60,11 @@ $LzRootId = $LzRoots.Roots[0].Id
 Write-Host "Creating Organizational Units:"
 # Reference: https://awscli.amazonaws.com/v2/documentation/api/latest/reference/organizations/create-organizational-unit.html
 
-$OuList = aws organizations list-organizational-units-for-parent --parent-id $LzRootId --profile $LzMgmtProfile | ConvertFrom-Json
+$OuList = aws organizations list-organizational-units-for-parent --parent-id $LzRootId --profile $LzMgmtProfile 
 # Create Organization Unit for Dev
 $LzDevOU = $OuList.OrganizationalUnits | Where-Object Name -eq $LzDevOUName | ConvertFrom-Json
 if($LzDevOu.Count -eq 0){
-    $LzDevOU = aws organizations create-organizational-unit --parent-id $LzRootId --name $LzDevOUName  --profile $LzMgmtProfile 
+    $LzDevOU = aws organizations create-organizational-unit --parent-id $LzRootId --name $LzDevOUName  --profile $LzMgmtProfile | ConvertFrom-Json
     if($null -eq $LzDevOU.OrganizationalUnit.Id)
     {
         Write-Host "    - ${LzDevOUName} create failed"
@@ -75,9 +75,9 @@ if($LzDevOu.Count -eq 0){
     Write-Host "    - ${LzDevOUName} already exits"
 }
 
-$LzTestOU = $OuList.OrganizationalUnits | Where-Object Name -eq $LzTestOUName | ConvertFrom-Json
+$LzTestOU = $OuList.OrganizationalUnits | Where-Object Name -eq $LzTestOUName
 if($LzTestOu.Count -eq 0){
-    $LzTestOU = aws organizations create-organizational-unit --parent-id $LzRootId --name $LzTestOUName  --profile $LzMgmtProfile 
+    $LzTestOU = aws organizations create-organizational-unit --parent-id $LzRootId --name $LzTestOUName  --profile $LzMgmtProfile | ConvertFrom-Json
     if($null -eq $LzTestOU.OrganizationalUnit.Id)
     {
         Write-Host "    - ${LzTestOUName} create failed"
@@ -88,9 +88,9 @@ if($LzTestOu.Count -eq 0){
     Write-Host "    - ${LzTestOUName} already exits"
 }
 
-$LzProdOU = $OuList.OrganizationalUnits | Where-Object Name -eq $LzProdOUName | ConvertFrom-Json
+$LzProdOU = $OuList.OrganizationalUnits | Where-Object Name -eq $LzProdOUName 
 if($LzProdOu.Count -eq 0){
-    $LzProdOU = aws organizations create-organizational-unit --parent-id $LzRootId --name $LzProdOUName  --profile $LzMgmtProfile 
+    $LzProdOU = aws organizations create-organizational-unit --parent-id $LzRootId --name $LzProdOUName  --profile $LzMgmtProfile | ConvertFrom-Json
     if($null -eq $LzProdOU.OrganizationalUnit.Id)
     {
         Write-Host "    - ${LzProdOUName} create failed"
