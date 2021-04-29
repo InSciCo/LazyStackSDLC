@@ -12,10 +12,11 @@ $LzOrgCode = (Read-Host "Enter your OrgCode")
 
 $LzRegion = ""
 do {
-    $LzMgmtProfile = Read-Host "Enter your AWS CLI Management Account Profile (default: ${LzOrgCode}Mgmt)"
+    $LzMgmtProfile = "${LzOrgcode}Mgmt"
+    $LzMgmtProfileInput = (Read-Host "Enter your AWS CLI Management Account Profile (default: ${LzOrgCode}Mgmt)")
     
-    if($LzMgmtProfile -eq "") {
-        $LzMgmtProfile = "${LzOrgCode}Mgmt"
+    if($LzMgmtProfileInput -eq $null) {
+        $LzMgmtProfile = $LzMgmtProfileInput
     }
  
    $LzMgmtProfileKey = aws configure get profile.${LzMgmtProfile}.aws_access_key_id
