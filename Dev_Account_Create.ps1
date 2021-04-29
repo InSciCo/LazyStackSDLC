@@ -9,7 +9,7 @@ do {
     $LzMgmtProfile = "${LzOrgcode}Mgmt"
     $LzMgmtProfileInput = (Read-Host "Enter your AWS CLI Management Account Profile (default: ${LzOrgCode}Mgmt)")
     
-    if($LzMgmtProfileInput -eq $null) {
+    if($null -eq $LzMgmtProfileInput) {
         $LzMgmtProfile = $LzMgmtProfileInput
     }
 
@@ -190,7 +190,7 @@ $null = aws iam attach-group-policy --group-name Developers --policy-arn $LzGrou
 # IAMUserCredsPolicy
 Write-Host "    - Adding policy IAMUserCredsPolicy"
 $LzGroupPolicyArn = aws iam list-policies --query 'Policies[?PolicyName==`IAMUserCredsPolicy`].{ARN:Arn}' --output text --profile $LzAccessRoleProfile
-if($LzGroupPolicyArn -eq $null)
+if($null -eq $LzGroupPolicyArn)
 {
     $LzGroupPolicy = aws iam create-policy --policy-name IAMUserCredsPolicy --policy-document file://IAMUserCredsPolicy.json --profile $LzAccessRoleProfile | ConvertFrom-Json
     $LzGroupPolicyArn = $LzGroupPolicy.Policy.Arn
