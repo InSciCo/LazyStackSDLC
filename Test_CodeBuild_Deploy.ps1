@@ -1,14 +1,14 @@
 Write-Host "Test_CodeBuild_Deploy.ps1 - V1.0.0"
 Write-Host "This script deploys two CodeBuild project stacks to a System Test Account."
-Write-Host "   - Test_CodeBuild_Create.yaml defines the first CodeBuild project stack"
-Write-Host "   - Test_CodeBuild_Merge.yaml defines the second CodeBuild project stack"
+Write-Host "   - Test_CodeBuild_PR_Create.yaml defines the first CodeBuild project stack"
+Write-Host "   - Test_CodeBuild_PR_Merge.yaml defines the second CodeBuild project stack"
 Write-Host "Each project is associated with a GitHub repository containing a serverless application stack."
 Write-Host ""
-Write-Host "Test_CodeBuild_Create.yaml defines a CodeBuild project stack that builds, tests and publishes"
+Write-Host "Test_CodeBuild_PR_Create.yaml defines a CodeBuild project stack that builds, tests and publishes"
 Write-Host "an application stack when a Pull Request is created or updated in the GitHub repository."
 Write-Host "The published stack is called the PR stack. The stack is named based on the PR branch name."
 Write-Host ""
-Write-Host "Test_CodeBuild_Merge.yaml defines a CodeBuild project stack that deletes an application stack"
+Write-Host "Test_CodeBuild_PR_Merge.yaml defines a CodeBuild project stack that deletes an application stack"
 Write-Host "when a Pull Request is merged in the GitHub application repository."
 Write-Host ""
 Write-Host "Note: Press return to accept a default values."
@@ -85,8 +85,37 @@ if($LzRepoShortNameInput -ne "") {
     $LzRepoShortName = $LzRepoShortNameInput
 }
 
-$LzCodeBuildPRCreateStackName= "${LzRepoShortName}_pr_create"
-$LzCodeBuildPRDeleteStackName="${LzRepoShortName}_pr_merge"
+do {
+    $LzCodeBuild_PR_Create = "Test_CodeBuild_PR_Create.yaml"
+    $LzCodeBuild_PR_Create_Input = Read-Host "Enter PR Create template name (default: ${LzCodeBuild_PR_Create})"
+    if($null -ne $LzCodeBuild_PR_Create_Input) {
+        $LzCodeBuild_PR_Merge = $LzCodeBuild_PR_Create_Input
+    }
+
+    $LzFileFound = [System.IO.File]::Exists($LzCodeBuild_PR_Create)
+    if($false -eq $LzFileFound) {
+        Write-Host "That file was not found."
+    }
+}
+until ($true -eq $LzFileFound)
+
+
+do {
+    $LzCodeBuild_PR_Merge = "Test_CodeBuild_PR_Merge.yaml"
+    $LzCodeBuild_PR_Merge_Input = Read-Host "Enter PR Merge template name (default: ${LzCodeBuild_PR_Merge})"
+    if($null -ne $LzCodeBuild_PR_Merge_Input) {
+        $LzCodeBuild_PR_Merge = $LzCodeBuild_PR_Merge_Input
+    }
+
+    $LzFileFound = [System.IO.File]::Exists($LzCodeBuild_PR_Merge)
+    if($false -eq $LzFileFound) {
+        Write-Host "That file was not found."
+    }
+}
+until ($true -eq $LzFileFound)
+
+$LzCodeBuild_PR_Create_StackName= "${LzRepoShortName}_pr_create"
+$LzCodeBuild_PR_Merge_StackName="${LzRepoShortName}_pr_merge"
 
 Write-Host "Please review and confirm the following:"
 Write-Host "    OrgCode: ${LzOrgCode}" 
@@ -96,8 +125,10 @@ Write-Host "    AWS Region: ${LzRegion}"
 Write-Host "    System Test Account name: ${LzTestAcctName}"
 Write-Host "    GitHub Repo URL: ${LzGitHubRepo}"
 Write-Host "    Repo short name: ${LzRepoShortName}"
-Write-Host "    CodeBuild PR Create project stack name: ${LzCodeBuildPRCreateStackName}"
-Write-Host "    CodeBuild PR Merge project stack name: ${LzCodeBuildPRDeleteStackName}"
+Write-Host "    CodeBuild PR Create project stack name: ${LzCodeBuild_PR_Create_StackName}"
+Write-Host "    CodeBuild PR Create project template: ${LzCodeBuild_PR_Create}"
+Write-Host "    CodeBuild PR Merge project stack name: ${LzCodeBuild_PR_Merge_StackName}"
+Write-Host "    CodeBuild PR Merge project template: ${LzCodeBuild_PR_Merge}"
 
 $LzContinue = (Read-Host "Continue y/n") 
 if($LzContinue -ne "y") {
@@ -108,10 +139,10 @@ Write-Host ""
 Write-Host "Processing Starting"
 
 # Test Account
-Write-Host "Deploying ${LzCodeBuildPRCreateStackName} AWS CodeBuild project to ${LzTestAcctName} account."
-sam deploy --stack-name $LzCodeBuildTestCICDStackName -t Test_CodeBuild_Create.yaml --capabilities CAPABILITY_NAMED_IAM --parameter-overrides GitHubRepoParam=$LzGitHubRepo --profile $LzTestAccessRoleProfile --region $LzRegion
+Write-Host "Deploying ${LzCodeBuild_PR_Create_StackName} AWS CodeBuild project to ${LzTestAcctName} account."
+sam deploy --stack-name $LzCodeBuild_PR_Create_StackName -t $LzCodeBuild_PR_Create --capabilities CAPABILITY_NAMED_IAM --parameter-overrides GitHubRepoParam=$LzGitHubRepo --profile $LzTestAccessRoleProfile --region $LzRegion
 
-Write-Host "Deploying ${LzCodeBuildPRMergeStackName} AWS CodeBuild project to ${LzTestAcctName} account."
-sam deploy --stack-name $LzCodeBuildTestDeleteStackName -t Test_CodeBuild_Merge.yaml --capabilities CAPABILITY_NAMED_IAM --parameter-overrides GitHubRepoParam=$LzGitHubRepo --profile $LzTestAccessRoleProfile --region $LzRegion
+Write-Host "Deploying ${LzCodeBuild_PR_Merge_StackName} AWS CodeBuild project to ${LzTestAcctName} account."
+sam deploy --stack-name $LzCodeBuild_PR_Merge_StackName -t $LzCodeBuild_PR_Merge --capabilities CAPABILITY_NAMED_IAM --parameter-overrides GitHubRepoParam=$LzGitHubRepo --profile $LzTestAccessRoleProfile --region $LzRegion
 
 Write-Host "Processing Complete"

@@ -1,9 +1,9 @@
 Write-Host "Prod_CodeBuild_Deploy.ps1 - V1.0.0"
 Write-Host "This script deploys one CodeBuild project stack to a System Prod Account."
-Write-Host "   - Prod_CodeBuild_Merge.yaml defines the CodeBuild project stack"
+Write-Host "   - Prod_CodeBuild_PR_Merge.yaml defines the CodeBuild project stack"
 Write-Host "The project is associated with a GitHub repository containing a serverless application stack."
 Write-Host ""
-Write-Host "Prod_CodeBuild_Create.yaml defines a CodeBuild project stack that builds and publishes"
+Write-Host "Prod_CodeBuild_PR_Merge.yaml defines a CodeBuild project stack that builds and publishes"
 Write-Host "the production application stack when a Pull Request is merged in the GitHub repository."
 Write-Host ""
 Write-Host "Note: Press return to accept a default values."
@@ -80,7 +80,21 @@ if($LzRepoShortNameInput -ne "") {
     $LzRepoShortName = $LzRepoShortNameInput
 }
 
-$LzCodeBuildPRDeleProdackName="${LzRepoShortName}_pr_merge"
+$LzCodeBuild_PR_Merge_StackName="${LzRepoShortName}_pr_merge"
+
+do {
+    $LzCodeBuild_PR_Merge = "Prod_CodeBuild_PR_Merge.yaml"
+    $LzCodeBuild_PR_Merge_Input = Read-Host "Enter PR Merge template name (default: ${LzCodeBuild_PR_Merge})"
+    if($null -ne $LzCodeBuild_PR_Merge_Input) {
+        $LzCodeBuild_PR_Merge = $LzCodeBuild_PR_Merge_Input
+    }
+
+    $LzFileFound = [System.IO.File]::Exists($LzCodeBuild_PR_Merge)
+    if($false -eq $LzFileFound) {
+        Write-Host "That file was not found."
+    }
+}
+until ($true -eq $LzFileFound)
 
 Write-Host "Please Reivew and confirm the following:"
 Write-Host "    OrgCode: ${LzOrgCode}" 
@@ -90,7 +104,8 @@ Write-Host "    AWS Region: ${LzRegion}"
 Write-Host "    System Production Account name: ${LzProdAcctName}"
 Write-Host "    GitHub Repo URL: ${LzGitHubRepo}"
 Write-Host "    Repo short name: ${LzRepoShortName}"
-Write-Host "    CodeBuild PR Merge project stack name: ${LzCodeBuildPRDeleProdackName}"
+Write-Host "    CodeBuild PR Merge project stack name: ${LzCodeBuild_PR_Merge_StackName}"
+Write-Host "    CodeBuild PR Merge project template: ${LzCodeBuild_PR_Merge}"
 
 $LzContinue = (Read-Host "Continue y/n") 
 if($LzContinue -ne "y") {
@@ -101,7 +116,7 @@ Write-Host ""
 Write-Host "Processing Starting"
 
 # Prod Account
-Write-Host "Deploying ${LzCodeBuildPRMergeStackName} AWS CodeBuild project to ${LzProdAcctName} account."
-sam deploy --stack-name $LzCodeBuildProdDeleProdackName -t Prod_CodeBuild_Merge.yaml --capabilities CAPABILITY_NAMED_IAM --parameter-overrides GitHubRepoParam=$LzGitHubRepo --profile $LzProdAccessRoleProfile --region $LzRegion
+Write-Host "Deploying ${LzCodeBuild_PR_Merge_StackName} AWS CodeBuild project to ${LzProdAcctName} account."
+sam deploy --stack-name $LzCodeBuild_PR_Merge_StackName -t $LzCodeBuild_PR_Merge --capabilities CAPABILITY_NAMED_IAM --parameter-overrides GitHubRepoParam=$LzGitHubRepo --profile $LzProdAccessRoleProfile --region $LzRegion
 
 Write-Host "Processing Complete"
