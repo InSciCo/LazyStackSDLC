@@ -80,7 +80,7 @@ if($LzRepoShortNameInput -ne "") {
     $LzRepoShortName = $LzRepoShortNameInput
 }
 
-$LzCodeBuild_PR_Merge_StackName="${LzRepoShortName}-pr-merge"
+$LzCodeBuild_PR_Merge_StackName="${LzRepoShortName}-prod-pr-merge"
 
 do {
     $LzCodeBuild_PR_Merge = "Prod_CodeBuild_PR_Merge.yaml"

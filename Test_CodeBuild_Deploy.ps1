@@ -114,8 +114,8 @@ do {
 }
 until ($true -eq $LzFileFound)
 
-$LzCodeBuild_PR_Create_StackName= "${LzRepoShortName}-pr-create"
-$LzCodeBuild_PR_Merge_StackName="${LzRepoShortName}-pr-merge"
+$LzCodeBuild_PR_Create_StackName= "${LzRepoShortName}-test-pr-create"
+$LzCodeBuild_PR_Merge_StackName="${LzRepoShortName}-test-pr-merge"
 
 Write-Host "Please review and confirm the following:"
 Write-Host "    OrgCode: ${LzOrgCode}" 

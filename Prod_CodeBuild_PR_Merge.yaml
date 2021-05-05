@@ -9,7 +9,7 @@ Resources:
   S3:
     Type: "AWS::S3::Bucket"
     Properties: 
-      BucketName: !Sub "prod-pr-merge-${AWS::StackName}"
+      BucketName: !Sub "${AWS::StackName}"
 
   CodeBuild:
     Type: AWS::CodeBuild::Project
@@ -60,7 +60,7 @@ Resources:
   CodeBuildRole:
     Type: AWS::IAM::Role
     Properties:
-      RoleName: !Sub "CodeBuildRole-prod-pr-merge-${AWS::StackName}"
+      RoleName: !Sub "CodeBuildRole-${AWS::StackName}"
       Description: Provides Codebuild permission to access API GW, Lambda and Cloudformation
       #Provide Codebuild permission to assume this role
       AssumeRolePolicyDocument:
@@ -75,7 +75,7 @@ Resources:
   CodeBuildPolicy:
     Type: "AWS::IAM::Policy"
     Properties:
-      PolicyName: !Sub "CodeBuildPolicy-prod-pr-merge-${AWS::StackName}"
+      PolicyName: !Sub "CodeBuildPolicy-${AWS::StackName}"
       PolicyDocument:
         Version: '2012-10-17'
         Statement:
