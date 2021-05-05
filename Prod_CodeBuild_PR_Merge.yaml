@@ -4,15 +4,13 @@ Parameters:
   GitHubRepoParam:
     Type: String
     Description: Enter the GitHub URL for the repo
-  S3BucketName:
-    Type: String
-    Description: Name of S3 Bucket
 
 Resources:
   S3:
     Type: "AWS::S3::Bucket"
     Properties: 
-      BucketName: !Ref S3BucketName
+      BucketName: !Sub "${AWS::StackName}-${AWS::AccountId}"
+
 
   CodeBuild:
     Type: AWS::CodeBuild::Project
@@ -42,7 +40,7 @@ Resources:
             build:
               commands:
                 - dotnet build --configuration Release
-                - eval "sam deploy -t Stacks/Rev/serverless.template --stack-name prod --s3-bucket ${S3}  --capabilities CAPABILITY_NAMED_IAM --region ${AWS::Region}"
+                - eval "sam deploy -t Stacks/Rev/serverless.template --stack-name prod --s3-bucket ${S3} --capabilities CAPABILITY_NAMED_IAM --region ${AWS::Region}"
       Triggers:
         Webhook: true
         FilterGroups:
