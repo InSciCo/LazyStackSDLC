@@ -175,6 +175,7 @@ $LzAccessRoleProfile = $LzAcctName + "AccessRole"
 Write-Host "Adding ${LzAccessRole} profile and associating it with the ${LzMgmtAcct} profile. "
 $null = aws configure set role_arn arn:aws:iam::${LzAcctId}:role/OrganizationAccountAccessRole --profile $LzAccessRoleProfile
 $null = aws configure set source_profile $LzMgmtProfile --profile $LzAccessRoleProfile
+$null = aws configure set region $LzRegion --profile $LzAccessRoleProfile
 
 # Create Developers Group for Developers Account
 # Reference: https://docs.aws.amazon.com/cli/latest/userguide/cli-services-iam-new-user-group.html

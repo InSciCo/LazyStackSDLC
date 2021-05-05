@@ -74,18 +74,18 @@ if($LzGitHubRepoInput -ne "") {
 $urlparts=$LzGitHubRepo.Split('/')
 $LzRepoShortName=$urlparts[$urlparts.Count - 1]
 $LzRepoShortName=$LzRepoShortName.Split('.')
-$LzRepoShortName=$LzRepoShortName[0]
+$LzRepoShortName=$LzRepoShortName[0].ToLower()
 $LzRepoShortNameInput = Read-Host "Enter your repo short name (default: ${LzRepoShortName})"
 if($LzRepoShortNameInput -ne "") {
     $LzRepoShortName = $LzRepoShortNameInput
 }
 
-$LzCodeBuild_PR_Merge_StackName="${LzRepoShortName}_pr_merge"
+$LzCodeBuild_PR_Merge_StackName="${LzRepoShortName}-pr-merge"
 
 do {
     $LzCodeBuild_PR_Merge = "Prod_CodeBuild_PR_Merge.yaml"
     $LzCodeBuild_PR_Merge_Input = Read-Host "Enter PR Merge template name (default: ${LzCodeBuild_PR_Merge})"
-    if($null -ne $LzCodeBuild_PR_Merge_Input) {
+    if("" -ne $LzCodeBuild_PR_Merge_Input) {
         $LzCodeBuild_PR_Merge = $LzCodeBuild_PR_Merge_Input
     }
 

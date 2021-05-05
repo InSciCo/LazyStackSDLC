@@ -79,17 +79,17 @@ if($LzGitHubRepoInput -ne "") {
 $urlparts=$LzGitHubRepo.Split('/')
 $LzRepoShortName=$urlparts[$urlparts.Count - 1]
 $LzRepoShortName=$LzRepoShortName.Split('.')
-$LzRepoShortName=$LzRepoShortName[0]
+$LzRepoShortName=$LzRepoShortName[0].ToLower()
 $LzRepoShortNameInput = Read-Host "Enter your repo short name (default: ${LzRepoShortName})"
 if($LzRepoShortNameInput -ne "") {
-    $LzRepoShortName = $LzRepoShortNameInput
+    $LzRepoShortName = $LzRepoShortNameInput.ToLower()
 }
 
 do {
     $LzCodeBuild_PR_Create = "Test_CodeBuild_PR_Create.yaml"
     $LzCodeBuild_PR_Create_Input = Read-Host "Enter PR Create template name (default: ${LzCodeBuild_PR_Create})"
-    if($null -ne $LzCodeBuild_PR_Create_Input) {
-        $LzCodeBuild_PR_Merge = $LzCodeBuild_PR_Create_Input
+    if("" -ne $LzCodeBuild_PR_Create_Input) {
+        $LzCodeBuild_PR_Create = $LzCodeBuild_PR_Create_Input
     }
 
     $LzFileFound = [System.IO.File]::Exists($LzCodeBuild_PR_Create)
@@ -103,7 +103,7 @@ until ($true -eq $LzFileFound)
 do {
     $LzCodeBuild_PR_Merge = "Test_CodeBuild_PR_Merge.yaml"
     $LzCodeBuild_PR_Merge_Input = Read-Host "Enter PR Merge template name (default: ${LzCodeBuild_PR_Merge})"
-    if($null -ne $LzCodeBuild_PR_Merge_Input) {
+    if("" -ne $LzCodeBuild_PR_Merge_Input) {
         $LzCodeBuild_PR_Merge = $LzCodeBuild_PR_Merge_Input
     }
 
@@ -114,8 +114,8 @@ do {
 }
 until ($true -eq $LzFileFound)
 
-$LzCodeBuild_PR_Create_StackName= "${LzRepoShortName}_pr_create"
-$LzCodeBuild_PR_Merge_StackName="${LzRepoShortName}_pr_merge"
+$LzCodeBuild_PR_Create_StackName= "${LzRepoShortName}-pr-create"
+$LzCodeBuild_PR_Merge_StackName="${LzRepoShortName}-pr-merge"
 
 Write-Host "Please review and confirm the following:"
 Write-Host "    OrgCode: ${LzOrgCode}" 
@@ -128,7 +128,7 @@ Write-Host "    Repo short name: ${LzRepoShortName}"
 Write-Host "    CodeBuild PR Create project stack name: ${LzCodeBuild_PR_Create_StackName}"
 Write-Host "    CodeBuild PR Create project template: ${LzCodeBuild_PR_Create}"
 Write-Host "    CodeBuild PR Merge project stack name: ${LzCodeBuild_PR_Merge_StackName}"
-Write-Host "    CodeBuild PR Merge project template: ${LzCodeBuild_PR_Merge}"
+Write-Host "    CodeBuild PR Merge project template: ${LzCodeBuild_PR_Merge}" 
 
 $LzContinue = (Read-Host "Continue y/n") 
 if($LzContinue -ne "y") {
@@ -142,7 +142,7 @@ Write-Host "Processing Starting"
 Write-Host "Deploying ${LzCodeBuild_PR_Create_StackName} AWS CodeBuild project to ${LzTestAcctName} account."
 sam deploy --stack-name $LzCodeBuild_PR_Create_StackName -t $LzCodeBuild_PR_Create --capabilities CAPABILITY_NAMED_IAM --parameter-overrides GitHubRepoParam=$LzGitHubRepo --profile $LzTestAccessRoleProfile --region $LzRegion
 
-Write-Host "Deploying ${LzCodeBuild_PR_Merge_StackName} AWS CodeBuild project to ${LzTestAcctName} account."
-sam deploy --stack-name $LzCodeBuild_PR_Merge_StackName -t $LzCodeBuild_PR_Merge --capabilities CAPABILITY_NAMED_IAM --parameter-overrides GitHubRepoParam=$LzGitHubRepo --profile $LzTestAccessRoleProfile --region $LzRegion
+#Write-Host "Deploying ${LzCodeBuild_PR_Merge_StackName} AWS CodeBuild project to ${LzTestAcctName} account."
+#sam deploy --stack-name $LzCodeBuild_PR_Merge_StackName -t $LzCodeBuild_PR_Merge --capabilities CAPABILITY_NAMED_IAM --parameter-overrides GitHubRepoParam=$LzGitHubRepo --profile $LzTestAccessRoleProfile --region $LzRegion
 
 Write-Host "Processing Complete"
