@@ -80,7 +80,7 @@ if($LzRepoShortNameInput -ne "") {
     $LzRepoShortName = $LzRepoShortNameInput
 }
 
-$LzCodeBuild_PR_Merge_StackName="${LzRepoShortName}-prod-pr-merge"
+$LzCodeBuild_PR_Merge_StackName="${LzRepoShortName}-p-pr-m"
 
 do {
     $LzCodeBuild_PR_Merge = "Prod_CodeBuild_PR_Merge.yaml"
@@ -96,6 +96,31 @@ do {
 }
 until ($true -eq $LzFileFound)
 
+#Determine bucket names
+#Bucket names must be unique across a region so we use a GUID to create unique bucket names
+#The full name will be "${LzRepoShortName}-${LzGUID}"
+#We call S3 to get a list of buckets and reuse an existing bucket name if one exists for the stack
+#Otherwise we create a new bucket
+#Get all bucket names
+$LzBuckets= @(aws s3 ls --profile $LzProdAccessRoleProfile)
+$LzMatch =""
+$LzReg = "${LzCodeBuild_PR_Merge_StackName}-" 
+foreach($LzBucket in $LzBuckets){
+    $LzBucket_name = $LzBucket.split(' ')[2]
+    if($LzBucket_name -match $LzReg){
+        $LzMatch=$LzBucket_name
+        break
+    }
+}
+if("" -eq $LzMatch) {
+    $LzGUID = New-Guid
+    $LzPR_Merge_Bucket = $LzCodeBuild_PR_Merge_StackName + "-" + $LzGuid
+}
+else {
+    $LzPR_Merge_Bucket = $LzMatch
+}
+
+
 Write-Host "Please Reivew and confirm the following:"
 Write-Host "    OrgCode: ${LzOrgCode}" 
 Write-Host "    SysCode: ${LzSysCode}"
@@ -105,6 +130,7 @@ Write-Host "    System Production Account name: ${LzProdAcctName}"
 Write-Host "    GitHub Repo URL: ${LzGitHubRepo}"
 Write-Host "    Repo short name: ${LzRepoShortName}"
 Write-Host "    CodeBuild PR Merge project stack name: ${LzCodeBuild_PR_Merge_StackName}"
+Write-Host "    CodeBuild PR Merge project S3 bucket: ${LzPR_Merge_Bucket}"
 Write-Host "    CodeBuild PR Merge project template: ${LzCodeBuild_PR_Merge}"
 
 $LzContinue = (Read-Host "Continue y/n") 
@@ -117,6 +143,6 @@ Write-Host "Processing Starting"
 
 # Prod Account
 Write-Host "Deploying ${LzCodeBuild_PR_Merge_StackName} AWS CodeBuild project to ${LzProdAcctName} account."
-sam deploy --stack-name $LzCodeBuild_PR_Merge_StackName -t $LzCodeBuild_PR_Merge --capabilities CAPABILITY_NAMED_IAM --parameter-overrides GitHubRepoParam=$LzGitHubRepo --profile $LzProdAccessRoleProfile --region $LzRegion
+sam deploy --stack-name $LzCodeBuild_PR_Merge_StackName -t $LzCodeBuild_PR_Merge --capabilities CAPABILITY_NAMED_IAM --parameter-overrides GitHubRepoParam=$LzGitHubRepo S3BucketName=$LzPR_Merge_Bucket --profile $LzProdAccessRoleProfile --region $LzRegion
 
 Write-Host "Processing Complete"

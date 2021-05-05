@@ -85,6 +85,9 @@ if($LzRepoShortNameInput -ne "") {
     $LzRepoShortName = $LzRepoShortNameInput.ToLower()
 }
 
+$LzCodeBuild_PR_Create_StackName= "${LzRepoShortName}-t-pr-c"
+$LzCodeBuild_PR_Merge_StackName="${LzRepoShortName}-t-pr-m"
+
 do {
     $LzCodeBuild_PR_Create = "Test_CodeBuild_PR_Create.yaml"
     $LzCodeBuild_PR_Create_Input = Read-Host "Enter PR Create template name (default: ${LzCodeBuild_PR_Create})"
@@ -114,8 +117,47 @@ do {
 }
 until ($true -eq $LzFileFound)
 
-$LzCodeBuild_PR_Create_StackName= "${LzRepoShortName}-test-pr-create"
-$LzCodeBuild_PR_Merge_StackName="${LzRepoShortName}-test-pr-merge"
+
+#Determine bucket names
+#Bucket names must be unique across a region so we use a GUID to create unique bucket names
+#The full name will be "${LzRepoShortName}-${LzGUID}"
+#We call S3 to get a list of buckets and reuse an existing bucket name if one exists for the stack
+#Otherwise we create a new bucket
+#Get all bucket names
+$LzBuckets= @(aws s3 ls --profile $LzTestAccessRoleProfile)
+$LzMatch =""
+$LzReg = "${LzCodeBuild_PR_Create_StackName}-" 
+foreach($LzBucket in $LzBuckets){
+    $LzBucket_name = $LzBucket.split(' ')[2]
+    if($LzBucket_name -match $LzReg){
+        $LzMatch=$LzBucket_name
+        break
+    }
+}
+if("" -eq $LzMatch) {
+    $LzGUID = New-Guid
+    $LzPR_Create_Bucket = $LzCodeBuild_PR_Create_StackName + "-" +  $LzGUID
+}
+else {
+    $LzPR_Create_Bucket = $LzMatch
+}
+
+$LzReg = "${LzCodeBuild_PR_Merge_StackName}-" 
+foreach($LzBucket in $LzBuckets){
+    $LzBucket_name = $LzBucket.split(' ')[2]
+    if($LzBucket_name -match $LzReg){
+        $LzMatch=$LzBucket_name
+        break
+    }
+}
+if("" -eq $LzMatch) {
+    $LzGUID = New-Guid
+    $LzPR_Merge_Bucket = $LzCodeBuild_PR_Merge_StackName + "-" + $LzGuid
+}
+else {
+    $LzPR_Merge_Bucket = $LzMatch
+}
+
 
 Write-Host "Please review and confirm the following:"
 Write-Host "    OrgCode: ${LzOrgCode}" 
@@ -126,9 +168,11 @@ Write-Host "    System Test Account name: ${LzTestAcctName}"
 Write-Host "    GitHub Repo URL: ${LzGitHubRepo}"
 Write-Host "    Repo short name: ${LzRepoShortName}"
 Write-Host "    CodeBuild PR Create project stack name: ${LzCodeBuild_PR_Create_StackName}"
+Write-Host "    CodeBuild PR Create project S3 bucket: ${LzPR_Create_Bucket}"
 Write-Host "    CodeBuild PR Create project template: ${LzCodeBuild_PR_Create}"
 Write-Host "    CodeBuild PR Merge project stack name: ${LzCodeBuild_PR_Merge_StackName}"
-Write-Host "    CodeBuild PR Merge project template: ${LzCodeBuild_PR_Merge}" 
+Write-Host "    CodeBuild PR Merge project S3 bucket: ${LzPR_Merge_Bucket}"
+Write-Host "    CodeBuild PR Merge project template: ${LzCodeBuild_PR_Merge}"
 
 $LzContinue = (Read-Host "Continue y/n") 
 if($LzContinue -ne "y") {
@@ -140,9 +184,9 @@ Write-Host "Processing Starting"
 
 # Test Account
 Write-Host "Deploying ${LzCodeBuild_PR_Create_StackName} AWS CodeBuild project to ${LzTestAcctName} account."
-sam deploy --stack-name $LzCodeBuild_PR_Create_StackName -t $LzCodeBuild_PR_Create --capabilities CAPABILITY_NAMED_IAM --parameter-overrides GitHubRepoParam=$LzGitHubRepo --profile $LzTestAccessRoleProfile --region $LzRegion
+sam deploy --stack-name $LzCodeBuild_PR_Create_StackName -t $LzCodeBuild_PR_Create --capabilities CAPABILITY_NAMED_IAM --parameter-overrides GitHubRepoParam=$LzGitHubRepo S3BucketName=$LzPR_Create_Bucket --profile $LzTestAccessRoleProfile --region $LzRegion
 
 Write-Host "Deploying ${LzCodeBuild_PR_Merge_StackName} AWS CodeBuild project to ${LzTestAcctName} account."
-sam deploy --stack-name $LzCodeBuild_PR_Merge_StackName -t $LzCodeBuild_PR_Merge --capabilities CAPABILITY_NAMED_IAM --parameter-overrides GitHubRepoParam=$LzGitHubRepo --profile $LzTestAccessRoleProfile --region $LzRegion
+sam deploy --stack-name $LzCodeBuild_PR_Merge_StackName -t $LzCodeBuild_PR_Merge --capabilities CAPABILITY_NAMED_IAM --parameter-overrides GitHubRepoParam=$LzGitHubRepo S3BucketName=$LzPR_Merge_Bucket --profile $LzTestAccessRoleProfile --region $LzRegion
 
 Write-Host "Processing Complete"

@@ -4,12 +4,15 @@ Parameters:
   GitHubRepoParam:
     Type: String
     Description: Enter the GitHub URL for the repo
+  S3BucketName:
+    Type: String
+    Description: Name of S3 Bucket
 
 Resources:
   S3:
     Type: "AWS::S3::Bucket"
     Properties: 
-      BucketName: !Sub "${AWS::StackName}"
+      BucketName: !Ref S3BucketName
 
   CodeBuild:
     Type: AWS::CodeBuild::Project
@@ -61,7 +64,7 @@ Resources:
   CodeBuildRole:
     Type: AWS::IAM::Role
     Properties:
-      RoleName: !Sub "CodeBuildRole-${AWS::StackName}"
+      RoleName: !Sub "CodeBuildRole-test-pr-create-${AWS::StackName}"
       Description: Provides Codebuild permission to access API GW, Lambda and Cloudformation
       #Provide Codebuild permission to assume this role
       AssumeRolePolicyDocument:
@@ -76,7 +79,7 @@ Resources:
   CodeBuildPolicy:
     Type: "AWS::IAM::Policy"
     Properties:
-      PolicyName: !Sub "CodeBuildPolicy-${AWS::StackName}"
+      PolicyName: !Sub "CodeBuildPolicy-test-pr-create-${AWS::StackName}"
       PolicyDocument:
         Version: '2012-10-17'
         Statement:
