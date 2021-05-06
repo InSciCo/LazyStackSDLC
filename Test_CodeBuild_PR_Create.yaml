@@ -35,7 +35,7 @@ Resources:
         BuildSpec: !Sub |
           version: 0.2
           phases:
-            build:
+            bu
               commands:
                 # stack names can not include / characters so we replace with -
                 - stack=$(echo $CODEBUILD_WEBHOOK_TRIGGER | sed 's/\//-/g')
