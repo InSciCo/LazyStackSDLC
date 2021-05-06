@@ -178,6 +178,7 @@ Resources:
               - 'iam:PutRolePolicy'
               - 'iam:PassRole'
               - 'iam:TagRole'
+              - 'iam:CreateServiceLinkedRole'              
             Resource:
               - !Sub 'arn:aws:iam::${AWS::AccountId}:role/*'
 
