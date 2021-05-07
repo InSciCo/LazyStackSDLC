@@ -4,6 +4,9 @@ Parameters:
   GitHubRepoParam:
     Type: String
     Description: Enter the GitHub URL for the repo
+  ProdStackName:
+    Type: String
+    Description: Enter the name of the production stack
 
 Resources:
   S3:
@@ -40,7 +43,7 @@ Resources:
             build:
               commands:
                 - dotnet build --configuration Release
-                - eval "sam deploy -t Stacks/Rev/serverless.template --stack-name prod --s3-bucket ${S3} --capabilities CAPABILITY_NAMED_IAM --region ${AWS::Region}"
+                - eval "sam deploy -t Stacks/Rel/serverless.template --stack-name ${ProdStackName} --s3-bucket ${S3} --capabilities CAPABILITY_NAMED_IAM --region ${AWS::Region}"
       Triggers:
         Webhook: true
         FilterGroups:

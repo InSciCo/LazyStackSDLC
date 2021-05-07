@@ -35,7 +35,7 @@ Resources:
         BuildSpec: !Sub |
           version: 0.2
           phases:
-            bu
+            build:
               commands:
                 # stack names can not include / characters so we replace with -
                 - stack=$(echo $CODEBUILD_WEBHOOK_TRIGGER | sed 's/\//-/g')
@@ -43,7 +43,7 @@ Resources:
                 - dotnet build --configuration Release
                 # ${S3} is replaced during cloudformation template processing with S3 name
                 # $stack is replaced by csh
-                - eval "sam deploy -t Stacks/Rev/serverless.template --stack-name $stack --s3-bucket ${S3} --capabilities CAPABILITY_NAMED_IAM --region ${AWS::Region}"
+                - eval "sam deploy -t Stacks/Rel/serverless.template --stack-name $stack --s3-bucket ${S3} --capabilities CAPABILITY_NAMED_IAM --region ${AWS::Region}"
       Triggers:
         Webhook: true
         FilterGroups:

@@ -82,6 +82,13 @@ if($LzRepoShortNameInput -ne "") {
 
 $LzCodeBuild_PR_Merge_StackName="${LzRepoShortName}-p-pr-m"
 
+#Collection name of Production Stack
+$LzProdStackName = $LzRepoShortName
+$LzProdStackNameInput = Read-Host "Enter your production stack name (default: ${LzProdStackName})"
+if("" -ne $LzProdStackNameInput) {
+    $LzProdStackName = $LzProdStackNameInput
+}
+
 do {
     $LzCodeBuild_PR_Merge = "Prod_CodeBuild_PR_Merge.yaml"
     $LzCodeBuild_PR_Merge_Input = Read-Host "Enter PR Merge template name (default: ${LzCodeBuild_PR_Merge})"
@@ -104,6 +111,7 @@ Write-Host "    AWS Region: ${LzRegion}"
 Write-Host "    System Production Account name: ${LzProdAcctName}"
 Write-Host "    GitHub Repo URL: ${LzGitHubRepo}"
 Write-Host "    Repo short name: ${LzRepoShortName}"
+Write-Host "    Production stack name: ${LzProdStackName}"
 Write-Host "    CodeBuild PR Merge project stack name: ${LzCodeBuild_PR_Merge_StackName}"
 Write-Host "    CodeBuild PR Merge project template: ${LzCodeBuild_PR_Merge}"
 
@@ -117,6 +125,6 @@ Write-Host "Processing Starting"
 
 # Prod Account
 Write-Host "Deploying ${LzCodeBuild_PR_Merge_StackName} AWS CodeBuild project to ${LzProdAcctName} account."
-sam deploy --stack-name $LzCodeBuild_PR_Merge_StackName -t $LzCodeBuild_PR_Merge --capabilities CAPABILITY_NAMED_IAM --parameter-overrides GitHubRepoParam=$LzGitHubRepo --profile $LzProdAccessRoleProfile --region $LzRegion
+sam deploy --stack-name $LzCodeBuild_PR_Merge_StackName -t $LzCodeBuild_PR_Merge --capabilities CAPABILITY_NAMED_IAM --parameter-overrides GitHubRepoParam=$LzGitHubRepo ProdStackName=$LzProdStackName --profile $LzProdAccessRoleProfile --region $LzRegion
 
 Write-Host "Processing Complete"
