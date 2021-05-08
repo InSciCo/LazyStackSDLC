@@ -63,7 +63,7 @@
                 "iam:GetRolePolicy",
                 "iam:PassRole"
             ],            
-            "Resource": "arn:aws:iam::*:user/${aws:username}:role/*"
+            "Resource": "arn:aws:iam::*:role/*"
         }
         
     ]
