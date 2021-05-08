@@ -46,6 +46,25 @@
                 "iam:UploadSSHPublicKey"
             ],
             "Resource": "arn:aws:iam::*:user/${aws:username}"
+        },
+        {
+            "Sid": "AllowRoles",
+            "Effect": "Allow",
+            "Action": [
+                "iam:ListRoleTags",
+                "iam:TagRole",
+                "iam:CreateRole",
+                "iam:DeleteRole",
+                "iam:GetRole",
+                "iam:PutRolePolicy",
+                "iam:DetachRolePolicy",
+                "iam:DeleteRolePolicy",
+                "iam:AttachRolePolicy",
+                "iam:GetRolePolicy",
+                "iam:PassRole"
+            ],            
+            "Resource": "arn:aws:iam::*:user/${aws:username}:role/*"
         }
+        
     ]
 }
