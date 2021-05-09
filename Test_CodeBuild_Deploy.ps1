@@ -54,7 +54,7 @@ if($LzRegionInput -ne "") {
 }
 
 do {
-    $LzSysCode = Read-Host "Enter the SysCode (ex: Pet)"
+    $LzSysCode = Read-Host "Enter the SysCode (ex: Tut)"
     if($LzSysCode -eq "") {
         Write-Host "System Code can't be empty. Please enter a value."
     }

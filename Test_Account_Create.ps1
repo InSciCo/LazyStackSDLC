@@ -49,7 +49,7 @@ if($LzOUNameInput -ne "") {
 }
 
 do {
-    $LzSysHandle = Read-Host "Enter the System Handle (ex: Pet)"
+    $LzSysHandle = Read-Host "Enter the System Handle (ex: Tut)"
     if($LzSysHandle -eq "") {
         Write-Host "System Handle can't be empty. Please enter a value."
     }
