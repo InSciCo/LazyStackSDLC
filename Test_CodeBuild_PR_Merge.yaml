@@ -34,13 +34,26 @@ Resources:
         GitCloneDepth: 1
         BuildSpec: !Sub |
           version: 0.2
+          env:
+            git-credential-helper: yes
           phases:
             build:
               commands:
-                # stack names can not include / characters so we replace with -
-                - stack=$(echo $CODEBUILD_WEBHOOK_TRIGGER | sed 's/\//-/g')
-                # ${S3} is replaced during cloudformation template processing with S3 name
+                # ex for GitHub refs/heads/F1 
+                - echo $CODEBUILD_WEBHOOK_HEAD_REF
+                - FeatureBranch="$(basename $CODEBUILD_WEBHOOK_HEAD_REF)"
+                - stack=$FeatureBranch
+
                 - eval "aws cloudformation delete-stack --stack-name $stack"
+
+                - git config user.name "CodeBuild"
+                - git config user.email CodeBuild@example.com
+                - git checkout F1
+                
+                - git rm Stacks/Test/AwsSettings.json
+                - git commit -m "Deleted AwsSettings.json for PR Stack"
+                - git push --set-upstream origin HEAD:$FeatureBranch
+
       Triggers:
         Webhook: true
         FilterGroups:
@@ -113,6 +126,8 @@ Resources:
               - 'cloudformation:DescribeStacks'
               - 'cloudformation:ExecuteChangeSet'
               - 'cloudformation:GetTemplateSummary'
+              - 'cloudformation:DescribeStackResources'
+              - 'cloudformation:GetTemplate'
             Resource:
               - !Sub 'arn:aws:cloudformation:*:${AWS::AccountId}:stack/*'
 
@@ -175,6 +190,7 @@ Resources:
               - 'iam:PutRolePolicy'
               - 'iam:PassRole'
               - 'iam:TagRole'
+              - 'iam:CreateServiceLinkedRole'              
             Resource:
               - !Sub 'arn:aws:iam::${AWS::AccountId}:role/*'
 

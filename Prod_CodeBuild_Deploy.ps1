@@ -82,6 +82,12 @@ if($LzRepoShortNameInput -ne "") {
 
 $LzCodeBuild_PR_Merge_StackName="${LzRepoShortName}-p-pr-m"
 
+$LzGitHubLzSmfUtilRepo = "https://github.com/myorg/myrepo.git"
+$LzGitHubLzSmfUtilRepoInput = Read-Host "Enter the application stack's GitHub Repo URL (example: ${LzGitHubLzSmfRepo})"
+if($LzGitHubLzSmfUtilRepoInput -ne "") {
+    $LzGitHubLzSmfUtilRepo = $LzGitHubLzSmfUtilRepoInput
+}
+
 #Collection name of Production Stack
 $LzProdStackName = $LzRepoShortName
 $LzProdStackNameInput = Read-Host "Enter your production stack name (default: ${LzProdStackName})"
@@ -125,6 +131,6 @@ Write-Host "Processing Starting"
 
 # Prod Account
 Write-Host "Deploying ${LzCodeBuild_PR_Merge_StackName} AWS CodeBuild project to ${LzProdAcctName} account."
-sam deploy --stack-name $LzCodeBuild_PR_Merge_StackName -t $LzCodeBuild_PR_Merge --capabilities CAPABILITY_NAMED_IAM --parameter-overrides GitHubRepoParam=$LzGitHubRepo ProdStackName=$LzProdStackName --profile $LzProdAccessRoleProfile --region $LzRegion
+sam deploy --stack-name $LzCodeBuild_PR_Merge_StackName -t $LzCodeBuild_PR_Merge --capabilities CAPABILITY_NAMED_IAM --parameter-overrides GitHubRepoParam=$LzGitHubRepo ProdStackName=$LzProdStackName GitHubLzSmfUtilRepoParam=$LzgitHubLzSmfUtilRepo  --profile $LzProdAccessRoleProfile --region $LzRegion
 
 Write-Host "Processing Complete"

@@ -75,6 +75,7 @@ if($LzGitHubRepoInput -ne "") {
     $LzGitHubRepo = $LzGitHubRepoInput
 }
 
+
 #extract "myrepo" from "https://github.com/myorg/myrepo.git"
 $urlparts=$LzGitHubRepo.Split('/')
 $LzRepoShortName=$urlparts[$urlparts.Count - 1]
@@ -87,6 +88,12 @@ if($LzRepoShortNameInput -ne "") {
 
 $LzCodeBuild_PR_Create_StackName= "${LzRepoShortName}-t-pr-c"
 $LzCodeBuild_PR_Merge_StackName="${LzRepoShortName}-t-pr-m"
+
+$LzGitHubLzSmfUtilRepo = "https://github.com/myorg/myrepo.git"
+$LzGitHubLzSmfUtilRepoInput = Read-Host "Enter the application stack's GitHub Repo URL (example: ${LzGitHubLzSmfRepo})"
+if($LzGitHubLzSmfUtilRepoInput -ne "") {
+    $LzGitHubLzSmfUtilRepo = $LzGitHubLzSmfUtilRepoInput
+}
 
 do {
     $LzCodeBuild_PR_Create = "Test_CodeBuild_PR_Create.yaml"
@@ -127,6 +134,7 @@ Write-Host "    AWS Region: ${LzRegion}"
 Write-Host "    System Test Account name: ${LzTestAcctName}"
 Write-Host "    GitHub Repo URL: ${LzGitHubRepo}"
 Write-Host "    Repo short name: ${LzRepoShortName}"
+Write-Host "    GitHub LzGitHub Repo URL: ${LzGitHubLzSmfUtilRepo}"
 Write-Host "    CodeBuild PR Create project stack name: ${LzCodeBuild_PR_Create_StackName}"
 Write-Host "    CodeBuild PR Create project template: ${LzCodeBuild_PR_Create}"
 Write-Host "    CodeBuild PR Merge project stack name: ${LzCodeBuild_PR_Merge_StackName}"
@@ -142,7 +150,7 @@ Write-Host "Processing Starting"
 
 # Test Account
 Write-Host "Deploying ${LzCodeBuild_PR_Create_StackName} AWS CodeBuild project to ${LzTestAcctName} account."
-sam deploy --stack-name $LzCodeBuild_PR_Create_StackName -t $LzCodeBuild_PR_Create --capabilities CAPABILITY_NAMED_IAM --parameter-overrides GitHubRepoParam=$LzGitHubRepo --profile $LzTestAccessRoleProfile --region $LzRegion
+sam deploy --stack-name $LzCodeBuild_PR_Create_StackName -t $LzCodeBuild_PR_Create --capabilities CAPABILITY_NAMED_IAM --parameter-overrides GitHubRepoParam=$LzGitHubRepo GitHubLzSmfUtilRepoParam=$LzgitHubLzSmfUtilRepo --profile $LzTestAccessRoleProfile --region $LzRegion
 
 Write-Host "Deploying ${LzCodeBuild_PR_Merge_StackName} AWS CodeBuild project to ${LzTestAcctName} account."
 sam deploy --stack-name $LzCodeBuild_PR_Merge_StackName -t $LzCodeBuild_PR_Merge --capabilities CAPABILITY_NAMED_IAM --parameter-overrides GitHubRepoParam=$LzGitHubRepo --profile $LzTestAccessRoleProfile --region $LzRegion

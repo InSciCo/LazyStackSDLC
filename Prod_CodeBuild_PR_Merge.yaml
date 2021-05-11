@@ -4,16 +4,20 @@ Parameters:
   GitHubRepoParam:
     Type: String
     Description: Enter the GitHub URL for the repo
-  ProdStackName:
+
+  GitHubLzSmfUtilRepoParam:
     Type: String
-    Description: Enter the name of the production stack
+    Description: Enter the GitHub URL for the LzSmfRepo
+
+  ProdStackNameParam:
+    Type: String
+    Default: Prod
 
 Resources:
   S3:
     Type: "AWS::S3::Bucket"
     Properties: 
       BucketName: !Sub "${AWS::StackName}-${AWS::AccountId}"
-
 
   CodeBuild:
     Type: AWS::CodeBuild::Project
@@ -32,6 +36,11 @@ Resources:
         Type: LINUX_CONTAINER
         ComputeType: BUILD_GENERAL1_SMALL
         Image: aws/codebuild/standard:5.0
+      SecondarySources:
+        - Type: GITHUB
+          Location: !Ref GitHubLzSmfUtilRepoParam
+          GitCloneDepth: 1
+          SourceIdentifier: LzSmfUtil
       SourceVersion: "main"
       Source:
         Location: !Ref GitHubRepoParam
@@ -39,11 +48,24 @@ Resources:
         GitCloneDepth: 1
         BuildSpec: !Sub |
           version: 0.2
+          env:
+            git-credential-helper: yes
           phases:
             build:
               commands:
-                - dotnet build --configuration Release
-                - eval "sam deploy -t Stacks/Rel/serverless.template --stack-name ${ProdStackName} --s3-bucket ${S3} --capabilities CAPABILITY_NAMED_IAM --region ${AWS::Region}"
+                # build all Lambda projects (and their dependencies)
+                - for proj in Lambdas/*/*.csproj; do eval "dotnet build ${proj} --configuration Release";  done
+
+                - eval "sam deploy -t Stacks/Prod/serverless.template --stack-name ${ProdStackNameParam} --s3-bucket ${S3} --capabilities CAPABILITY_NAMED_IAM --region ${AWS::Region}"
+                - pwsh -Command  "../LzSmfUtil/GetAwsSettings $stack Stacks/Prod/AwsSettings.json"
+
+                - git config user.name "CodeBuild"
+                - git config user.email CodeBuild@example.com
+                - git checkout main
+                
+                - git add Stacks/Prod/AwsSettings.json
+                - git commit -m "Update AwsSettings.json for Prod Stack"
+                - git push --set-upstream origin HEAD:main
       Triggers:
         Webhook: true
         FilterGroups:
@@ -119,6 +141,8 @@ Resources:
               - 'cloudformation:DescribeStacks'
               - 'cloudformation:ExecuteChangeSet'
               - 'cloudformation:GetTemplateSummary'
+              - 'cloudformation:DescribeStackResources'
+              - 'cloudformation:GetTemplate'
             Resource:
               - !Sub 'arn:aws:cloudformation:*:${AWS::AccountId}:stack/*'
 
