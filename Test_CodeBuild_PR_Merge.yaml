@@ -48,7 +48,7 @@ Resources:
 
                 - git config user.name "CodeBuild"
                 - git config user.email CodeBuild@example.com
-                - git checkout F1
+                - git checkout $FeatureBranch
                 
                 - git rm Stacks/Test/AwsSettings.json
                 - git commit -m "Deleted AwsSettings.json for PR Stack"

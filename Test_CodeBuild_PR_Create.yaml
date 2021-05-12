@@ -62,7 +62,7 @@ Resources:
 
                 - git config user.name "CodeBuild"
                 - git config user.email CodeBuild@example.com
-                - git checkout F1
+                - git checkout $FeatureBranch
                 
                 - git add Stacks/Test/AwsSettings.json
                 - git commit -m "Update AwsSettings.json for PR Stack"
