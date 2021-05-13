@@ -1,32 +1,40 @@
 Write-Host "Org_Create.ps1 - V1.0.0"
 Write-Host "This script creates OrgDevOU, OrgTestOU and OrgProdOU"
 Write-Host "Note: Press return to accept a default value."
-$LzOrgCode = (Read-Host "Enter your OrgCode")
+
 do {
-    $LzMgmtProfile = "${LzOrgcode}Mgmt"
-    $LzMgmtProfileInput = (Read-Host "Enter your AWS CLI Management Account Profile (default: ${LzOrgCode}Mgmt)")
-    
-    if($null -eq $LzMgmtProfileInput) {
-        $LzMgmtProfile = $LzMgmtProfileInput
+    if(Test-Path -Path "currentorg.txt") {
+        $LzSettingsFolder = Get-Content -Path "currentorg.txt"
+    } 
+
+    $LzSettingsFolderInput = Read-Host "Organization Settings Folder (default: ${LzSettingsFolder})"
+    if($LzSettingsFolderInput -ne "") {
+    $LzSettingsFolder = $LzSettingsFolderInput
+    }
+    $LzFolderFound = Test-Path -Path $LzSettingsFolder
+    if($LzFolderFound -eq $false) {
+        Write-Host "Folder not found, please run the SetDefaults if you have not done so already."
+        exit
     }
 
-   $LzMgmtProfileKey = (aws configure get profile.${LzMgmtProfile}.aws_access_key_id)
-    if($LzMgmtProfileKey -eq "") {
-        Write-Host "Profile ${LzMgmtProfile} not found or not configured with Access Key"
-        $LzMgmtProfileExists = $false
-    }
-    else  {
-        $LzMgmtProfileExists = $true
-        # Grab region in managment profile as default for new IAM User
-        $null = aws configure get profile.${LzMgmtProfile}.region
-    }
+} until ($LzFolderFound)
+
+# Read Settings.json to create Settings object
+$LzSettings = Get-Content -Path $LzSettingsFilePath | ConvertFrom-Json
+
+$LzOrgCode = $LzSettings.OrgCode
+$LzMgmtProfile = $LzSettings.AwsMgmtAccount
+
+# Double check that managment account profile is configured
+
+$LzMgmtProfileKey = (aws configure get profile.${LzMgmtProfile}.aws_access_key_id)
+if($LzMgmtProfileKey -eq "") {
+    Write-Host "Profile ${LzMgmtProfile} not found or not configured with Access Key"
+    Write-Host "Please run the SetDefaults if you have not done so already."
+    exit
 }
-until ($LzMgmtProfileExists)
 
 Write-Host "Please Review and confirm the following:"
-Write-Host "    OrgCode: ${LzOrgCode}"
-
-Write-Host "    Management Account Profile: ${LzMgmtProfile}"
 Write-Host "    AWS Organizatinal Units to be created:"
 $LzDevOUName = $LzOrgCode + "DevOU"
 Write-Host "        - ${LzDevOUName}"
