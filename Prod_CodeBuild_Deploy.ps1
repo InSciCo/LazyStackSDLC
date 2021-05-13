@@ -117,6 +117,7 @@ Write-Host "    AWS Region: ${LzRegion}"
 Write-Host "    System Production Account name: ${LzProdAcctName}"
 Write-Host "    GitHub Repo URL: ${LzGitHubRepo}"
 Write-Host "    Repo short name: ${LzRepoShortName}"
+Write-Host "    GitHub LazyStackSmfUtil Repo URL: ${LzGitHubLzSmfUtilRepo}"
 Write-Host "    Production stack name: ${LzProdStackName}"
 Write-Host "    CodeBuild PR Merge project stack name: ${LzCodeBuild_PR_Merge_StackName}"
 Write-Host "    CodeBuild PR Merge project template: ${LzCodeBuild_PR_Merge}"
@@ -131,6 +132,6 @@ Write-Host "Processing Starting"
 
 # Prod Account
 Write-Host "Deploying ${LzCodeBuild_PR_Merge_StackName} AWS CodeBuild project to ${LzProdAcctName} account."
-sam deploy --stack-name $LzCodeBuild_PR_Merge_StackName -t $LzCodeBuild_PR_Merge --capabilities CAPABILITY_NAMED_IAM --parameter-overrides GitHubRepoParam=$LzGitHubRepo ProdStackName=$LzProdStackName GitHubLzSmfUtilRepoParam=$LzgitHubLzSmfUtilRepo  --profile $LzProdAccessRoleProfile --region $LzRegion
+sam deploy --stack-name $LzCodeBuild_PR_Merge_StackName -t $LzCodeBuild_PR_Merge --capabilities CAPABILITY_NAMED_IAM --parameter-overrides GitHubRepoParam=$LzGitHubRepo ProdStackName=$LzProdStackName GitHubLzSmfUtilRepoParam=$LzGitHubLzSmfUtilRepo  --profile $LzProdAccessRoleProfile --region $LzRegion
 
 Write-Host "Processing Complete"
