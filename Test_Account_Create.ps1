@@ -180,7 +180,7 @@ We use the aws configure command to set this up.
 # Create AccessRole profile
 # Reference: https://awscli.amazonaws.com/v2/documentation/api/latest/reference/configure/set.html
 $LzAccessRoleProfile = $LzAcctName + "AccessRole"
-Write-Host "Adding ${LzAccessRole} profile and associating it with the ${LzMgmtAcct} profile. "
+Write-Host "Adding ${LzAccessRole} profile and associating it with the ${LzMgmtProfile} profile. "
 $null = aws configure set role_arn arn:aws:iam::${LzAcctId}:role/OrganizationAccountAccessRole --profile $LzAccessRoleProfile
 $null = aws configure set source_profile $LzMgmtProfile --profile $LzAccessRoleProfile
 $null = aws configure set region $LzRegion --profile $LzAccessRoleProfile 
