@@ -89,8 +89,8 @@ if($LzRepoShortNameInput -ne "") {
 $LzCodeBuild_PR_Create_StackName= "${LzRepoShortName}-t-pr-c"
 $LzCodeBuild_PR_Merge_StackName="${LzRepoShortName}-t-pr-m"
 
-$LzGitHubLzSmfUtilRepo = "https://github.com/myorg/myrepo.git"
-$LzGitHubLzSmfUtilRepoInput = Read-Host "Enter the application stack's GitHub Repo URL (example: ${LzGitHubLzSmfRepo})"
+$LzGitHubLzSmfUtilRepo = "https://github.com/myorg/LazyStackSmfUtil.git"
+$LzGitHubLzSmfUtilRepoInput = Read-Host "Enter your LazyStackSmfUtil stack's GitHub Repo URL (example: ${LzGitHubLzSmfUtilRepo})"
 if($LzGitHubLzSmfUtilRepoInput -ne "") {
     $LzGitHubLzSmfUtilRepo = $LzGitHubLzSmfUtilRepoInput
 }
