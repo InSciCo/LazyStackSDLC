@@ -2,36 +2,46 @@ Write-Host "Test_Account_Create.ps1 - V1.0.0"
 Write-Host "This script adds a System Test account to the Test Organizational Unit."
 Write-Host "It also adds a Admin Access Profile so this workstation can administer the new Account."
 Write-Host "Note: Press return to accept a default value."
-$LzOrgCode = (Read-Host "Enter your OrgCode")
+
+do {
+    if(Test-Path -Path "currentorg.txt") {
+        $LzSettingsFolder = Get-Content -Path "currentorg.txt"
+    } 
+
+    $LzSettingsFolderInput = Read-Host "Organization Settings Folder (default: ${LzSettingsFolder})"
+    if($LzSettingsFolderInput -ne "") {
+    $LzSettingsFolder = $LzSettingsFolderInput
+    }
+    $LzFolderFound = Test-Path -Path $LzSettingsFolder
+    if($LzFolderFound -eq $false) {
+        Write-Host "Folder not found, please run the SetDefaults if you have not done so already."
+        exit
+    }
+
+} until ($LzFolderFound)
+
+# Read Settings.json to create Settings object
+$LzSettings = Get-Content -Path $LzSettingsFilePath | ConvertFrom-Json
+
+$LzOrgCode = $LzSettings.OrgCode
+$LzMgmtProfile = $LzSettings.AwsMgmtAccount
 
 $LzRegion = ""
-do {
-    $LzMgmtProfile = "${LzOrgcode}Mgmt"
-    $LzMgmtProfileInput = (Read-Host "Enter your AWS CLI Management Account Profile (default: ${LzOrgCode}Mgmt)")
-    
-    if($null -eq $LzMgmtProfileInput) {
-        $LzMgmtProfile = $LzMgmtProfileInput
-    }
 
-   $LzMgmtProfileKey = aws configure get profile.${LzMgmtProfile}.aws_access_key_id
-    if($LzMgmtProfileKey -eq "") {
-        Write-Host "Profile ${LzMgmtProfile} not found or not configured with Access Key"
-        $LzMgmtProfileExists = $false
-    }
-    else  {
-        $LzMgmtProfileExists = $true
-        # Grab region in managment profile as default for new IAM User
-        $LzRegion = aws configure get profile.${LzMgmtProfile}.region
-    }
-
-    # Make sure LzMgmtProfile is associated with an IAM User in an Account belonging to an Organization
-    $null = aws organizations describe-organization --profile $LzMgmtProfile
-    if($? -eq $false) {
-        Write-Host "${LzMgmtProfile} profile is associated with an IAM User not administering an Organization."
-        Exit
-    }
+$LzMgmtProfileKey = (aws configure get profile.${LzMgmtProfile}.aws_access_key_id)
+if($LzMgmtProfileKey -eq "") {
+    Write-Host "Profile ${LzMgmtProfile} not found or not configured with Access Key"
+    Write-Host "Please run the SetDefaults if you have not done so already."
+    exit
 }
-until ($LzMgmtProfileExists)
+$LzRegion = aws configure get profile.${LzMgmtProfile}.region
+
+# Make sure LzMgmtProfile is associated with an IAM User in an Account belonging to an Organization
+$null = aws organizations describe-organization --profile $LzMgmtProfile
+if($? -eq $false) {
+    Write-Host "${LzMgmtProfile} profile is associated with an IAM User not administering an Organization."
+    Exit
+}
 
 if ($LzRegion -eq "") {
     $LzRegion = "us-east-1"
@@ -49,20 +59,20 @@ if($LzOUNameInput -ne "") {
 }
 
 do {
-    $LzSysHandle = Read-Host "Enter the System Handle (ex: Tut)"
-    if($LzSysHandle -eq "") {
+    $LzSysCode = Read-Host "Enter the System Code (ex: Tut)"
+    if($LzSysCode -eq "") {
         Write-Host "System Handle can't be empty. Please enter a value."
     }
 }
-until ($LzSysHandle -ne "")
+until ($LzSysCode -ne "")
 
-$LzAcctName = "${LzOrgCode}${LzSysHandle}Test"
+$LzAcctName = "${LzOrgCode}${LzSysCode}Test"
 $LzAcctNameInput = Read-Host "Enter the Test System Account Name (default: ${LzAcctName})"
 if($LzAcctNameInput -ne "") {
     $LzAcctName = $LzAcctNameInput
 }
 
-$LzIAMUserName = "${LzOrgCode}${LzSysHandle}Test"
+$LzIAMUserName = "${LzOrgCode}${LzSysCode}Test"
 $LzIAMUserNameInput = Read-Host "Enter the Test IAM User Name (default: ${LzIAMUserName})"
 if($LzIAMUserNameInput -ne "") {
     $LzIAMUserName = $LzIAMUserNameInput
@@ -83,8 +93,6 @@ do {
 until ($LzEmailOk)
 
 Write-Host "Please Review and confirm the following:"
-Write-Host "    OrgCode: ${LzOrgCode}"
-Write-Host "    Management Account Profile: ${LzMgmtProfile}"
 Write-Host "    Test OU: ${LzOUName}"
 Write-Host "    System Test Account to be created: ${LzAcctName}"
 Write-Host "    Test IAM User Name: ${LzIAMUserName}"
@@ -210,7 +218,8 @@ $LzOut = "Account Name: ${LzAcctName}${nl}"  `
 + "Please login, you will be required to reset your password." `
 + "Please login as soon as possible." 
 
-
-$LzOut > ${LzIAMUserName}_welcome.txt
+$LzSettingsFolder = Get-Content -Path "currentorg.txt"
+$LzSettingsFolderPath = Join-Path -Path $LzSettingsFolder -ChildPath "${LzIAMUserName}_welcome.txt"
+$LzOut > $LzSettingsFolderPath
 
 Write-Host "Processing Complete"
