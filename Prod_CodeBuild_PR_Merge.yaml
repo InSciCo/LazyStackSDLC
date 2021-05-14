@@ -54,15 +54,12 @@ Resources:
             build:
               commands:
                 # build all Lambda projects (and their dependencies)
-                - for proj in Lambdas/*/*.csproj; do eval "dotnet build ${proj} --configuration Release";  done
-
+                - for proj in Lambdas/*/*.csproj; do eval "dotnet build $proj --configuration Release";  done
                 - eval "sam deploy -t Stacks/Prod/serverless.template --stack-name ${ProdStackNameParam} --s3-bucket ${S3} --capabilities CAPABILITY_NAMED_IAM --region ${AWS::Region}"
-                - pwsh -Command  "../LzSmfUtil/GetAwsSettings $stack Stacks/Prod/AwsSettings.json"
-
+                - pwsh -Command  "../LazyStackSmfUtil/GetAwsSettings $stack Stacks/Prod/AwsSettings.json"
                 - git config user.name "CodeBuild"
                 - git config user.email CodeBuild@example.com
                 - git checkout main
-                
                 - git add Stacks/Prod/AwsSettings.json
                 - git commit -m "Update AwsSettings.json for Prod Stack"
                 - git push --set-upstream origin HEAD:main

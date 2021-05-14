@@ -54,6 +54,13 @@ if($? -eq $false) {
     Exit
 }
 
+$LzPAT = $LzSettings.PersonalAccessToken
+if("" -eq $LzPAT) {
+    Write-Host "No Personal Access Token found in Settings file. Please run SetDefaults."
+    exit
+}
+
+
 if ($LzRegion -eq "") {
     $LzRegion = "us-east-1"
 }
@@ -233,4 +240,6 @@ $LzSettingsFolder = Get-Content -Path "currentorg.txt"
 $LzSettingsFolderPath = Join-Path -Path $LzSettingsFolder -ChildPath "${LzIAMUserName}_welcome.txt"
 $LzOut > $LzSettingsFolderPath
 
+#update GitHub Personal Access Token
+aws codebuild import-source-credentials --server-type GITHUB --auth-type PERSONAL_ACCESS_TOKEN --profile LzAccessRoleProfile --token $LzPAT
 Write-Host "Processing Complete"

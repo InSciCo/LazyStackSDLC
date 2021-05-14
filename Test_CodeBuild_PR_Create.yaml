@@ -52,18 +52,14 @@ Resources:
                 - echo $CODEBUILD_WEBHOOK_HEAD_REF
                 - FeatureBranch="$(basename $CODEBUILD_WEBHOOK_HEAD_REF)"
                 - stack=$FeatureBranch
-
                 # build all Lambda projects (and their dependencies)
-                - for proj in Lambdas/*/*.csproj; do eval "dotnet build ${proj} --configuration Release";  done
-
+                - for proj in Lambdas/*/*.csproj; do eval "dotnet build $proj --configuration Release";  done
                 # $stack is replaced by csh
                 - eval "sam deploy -t Stacks/Test/serverless.template --stack-name $stack --s3-bucket ${S3} --capabilities CAPABILITY_NAMED_IAM --region ${AWS::Region}"
-                - pwsh -Command  "../LzSmfUtil/GetAwsSettings $stack Stacks/Test/AwsSettings.json"
-
+                - pwsh -Command  "../LazyStackSmfUtil/GetAwsSettings $stack Stacks/Test/AwsSettings.json"
                 - git config user.name "CodeBuild"
                 - git config user.email CodeBuild@example.com
                 - git checkout $FeatureBranch
-                
                 - git add Stacks/Test/AwsSettings.json
                 - git commit -m "Update AwsSettings.json for PR Stack"
                 - git push --set-upstream origin HEAD:$FeatureBranch
@@ -72,7 +68,8 @@ Resources:
         FilterGroups:
           - - Type: EVENT
               Pattern: PULL_REQUEST_CREATED,PULL_REQUEST_UPDATED
-              ExcludeMatchedPattern: false
+            - Type: COMMIT_MESSAGE
+              Pattern: \^[Cc][Bb]-\
       BadgeEnabled: false
       LogsConfig:
         CloudWatchLogs: 
