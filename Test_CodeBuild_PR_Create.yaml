@@ -69,7 +69,7 @@ Resources:
           - - Type: EVENT
               Pattern: PULL_REQUEST_CREATED,PULL_REQUEST_UPDATED
             - Type: COMMIT_MESSAGE
-              Pattern: \^[Cc][Bb]-\
+              Pattern: ^[Cc][Bb]-
       BadgeEnabled: false
       LogsConfig:
         CloudWatchLogs: 
