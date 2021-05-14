@@ -13,17 +13,28 @@ do {
     }
     $LzFolderFound = Test-Path -Path $LzSettingsFolder
     if($LzFolderFound -eq $false) {
-        Write-Host "Folder not found, please run the SetDefaults if you have not done so already."
+        Write-Host "Folder not found, please run SetDefaults if you have not done so already."
         exit
     }
 
 } until ($LzFolderFound)
 
 # Read Settings.json to create Settings object
+$LzSettingsFilePath = Join-Path -Path $LzSettingsFolder -Childpath "Settings.json"
 $LzSettings = Get-Content -Path $LzSettingsFilePath | ConvertFrom-Json
 
 $LzOrgCode = $LzSettings.OrgCode
+if("" -eq $LzOrgCode) 
+{
+    Write-Host "OrgCode is not configured in Settings file. Please run SetDefaults."
+    exit
+}
+
 $LzMgmtProfile = $LzSettings.AwsMgmtAccount
+if("" -eq $LzMgmtProfile) {
+    Write-Host "AWS Managment Account is not configured in Settings file. Please run SetDefaults."
+    exit
+}
 
 # Double check that managment account profile is configured
 
@@ -35,6 +46,7 @@ if($LzMgmtProfileKey -eq "") {
 }
 
 Write-Host "Please Review and confirm the following:"
+Write-Host "    OrgCode: ${LzOrgCode}"
 Write-Host "    AWS Organizatinal Units to be created:"
 $LzDevOUName = $LzOrgCode + "DevOU"
 Write-Host "        - ${LzDevOUName}"

@@ -21,17 +21,28 @@ do {
 } until ($LzFolderFound)
 
 # Read Settings.json to create Settings object
+$LzSettingsFilePath = Join-Path -Path $LzSettingsFolder -Childpath "Settings.json"
 $LzSettings = Get-Content -Path $LzSettingsFilePath | ConvertFrom-Json
 
 $LzOrgCode = $LzSettings.OrgCode
+if("" -eq $LzOrgCode) 
+{
+    Write-Host "OrgCode is not configured in Settings file. Please run SetDefaults."
+    exit
+}
+
 $LzMgmtProfile = $LzSettings.AwsMgmtAccount
+if("" -eq $LzMgmtProfile) {
+    Write-Host "AWS Managment Account is not configured in Settings file. Please run SetDefaults."
+    exit
+}
 
 $LzRegion = ""
 
 $LzMgmtProfileKey = (aws configure get profile.${LzMgmtProfile}.aws_access_key_id)
 if($LzMgmtProfileKey -eq "") {
     Write-Host "Profile ${LzMgmtProfile} not found or not configured with Access Key"
-    Write-Host "Please run the SetDefaults if you have not done so already."
+    Write-Host "Please configure the profile and run SetDefaults if you have not done so already."
     exit
 }
 $LzRegion = aws configure get profile.${LzMgmtProfile}.region

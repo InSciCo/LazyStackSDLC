@@ -31,6 +31,7 @@ do {
 } until ($LzFolderFound)
 
 # Read Settings.json to create Settings object
+$LzSettingsFilePath = Join-Path -Path $LzSettingsFolder -Childpath "Settings.json"
 $LzSettings = Get-Content -Path $LzSettingsFilePath | ConvertFrom-Json
 
 $LzOrgCode = $LzSettings.OrgCode
@@ -138,6 +139,7 @@ do {
 until ($true -eq $LzFileFound)
 
 Write-Host "Please review and confirm the following:"
+Write-Host "    OrgCode: ${LzOrgCode}"
 Write-Host "    SysCode: ${LzSysCode}"
 Write-Host "    AWS Region: ${LzRegion}"
 Write-Host "    System Test Account name: ${LzTestAcctName}"
