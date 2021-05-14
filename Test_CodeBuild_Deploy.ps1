@@ -13,36 +13,54 @@ Write-Host "when a Pull Request is merged in the GitHub application repository."
 Write-Host ""
 Write-Host "Note: Press return to accept a default values."
 
-$LzOrgCode = (Read-Host "Enter your OrgCode")
-
-$LzRegion = ""
 do {
-    $LzMgmtProfile = "${LzOrgcode}Mgmt"
-    $LzMgmtProfileInput = (Read-Host "Enter your AWS CLI Management Account Profile (default: ${LzOrgCode}Mgmt)")
-    
-    if($null -eq $LzMgmtProfileInput) {
-        $LzMgmtProfile = $LzMgmtProfileInput
+    if(Test-Path -Path "currentorg.txt") {
+        $LzSettingsFolder = Get-Content -Path "currentorg.txt"
+    } 
+
+    $LzSettingsFolderInput = Read-Host "Organization Settings Folder (default: ${LzSettingsFolder})"
+    if($LzSettingsFolderInput -ne "") {
+    $LzSettingsFolder = $LzSettingsFolderInput
     }
- 
-   $LzMgmtProfileKey = aws configure get profile.${LzMgmtProfile}.aws_access_key_id
-    if($LzMgmtProfileKey -eq "") {
-        Write-Host "Profile ${LzMgmtProfile} not found or not configured with Access Key"
-        $LzMgmtProfileExists = $false
-    }
-    else  {
-        $LzMgmtProfileExists = $true
-        # Grab region in managment profile as default for new IAM User
-        $LzRegion = aws configure get profile.${LzMgmtProfile}.region
+    $LzFolderFound = Test-Path -Path $LzSettingsFolder
+    if($LzFolderFound -eq $false) {
+        Write-Host "Folder not found, please run the SetDefaults if you have not done so already."
+        exit
     }
 
-    # Make sure LzMgmtProfile is associated with an IAM User in an Account belonging to an Organization
-    $null = aws organizations describe-organization --profile $LzMgmtProfile
-    if($? -eq $false) {
-        Write-Host "${LzMgmtProfile} profile is associated with an IAM User not administering an Organization."
-        Exit
-    }
+} until ($LzFolderFound)
+
+# Read Settings.json to create Settings object
+$LzSettings = Get-Content -Path $LzSettingsFilePath | ConvertFrom-Json
+
+$LzOrgCode = $LzSettings.OrgCode
+if("" -eq $LzOrgCode) {
+    Write-Host "Error: OrgCode missing from Settings file. Please Run SetDefaults to update it."
+    exit
 }
-until ($LzMgmtProfileExists)
+
+$LzGitHubLzSmfUtilRepo = $LzSettings.LazyStackSmfUtilRepo
+if("" -eq $LzGitHubLzSmfUtilRepo) {
+    Write-Host "Error: LazyStackSmfUtil URL missing from Settings file. Please Run SetDefaults to update it."
+    exit
+}
+
+$LzMgmtProfile = $LzSettings.AwsMgmtAccount
+$LzRegion = ""
+$LzMgmtProfileKey = (aws configure get profile.${LzMgmtProfile}.aws_access_key_id)
+if($LzMgmtProfileKey -eq "") {
+    Write-Host "Profile ${LzMgmtProfile} not found or not configured with Access Key"
+    Write-Host "Please run the SetDefaults if you have not done so already."
+    exit
+}
+$LzRegion = aws configure get profile.${LzMgmtProfile}.region
+
+# Make sure LzMgmtProfile is associated with an IAM User in an Account belonging to an Organization
+$null = aws organizations describe-organization --profile $LzMgmtProfile
+if($? -eq $false) {
+    Write-Host "${LzMgmtProfile} profile is associated with an IAM User not administering an Organization."
+    Exit
+}
 
 if ($LzRegion -eq "") {
     $LzRegion = "us-east-1"
@@ -89,11 +107,6 @@ if($LzRepoShortNameInput -ne "") {
 $LzCodeBuild_PR_Create_StackName= "${LzRepoShortName}-t-pr-c"
 $LzCodeBuild_PR_Merge_StackName="${LzRepoShortName}-t-pr-m"
 
-$LzGitHubLzSmfUtilRepo = "https://github.com/myorg/LazyStackSmfUtil.git"
-$LzGitHubLzSmfUtilRepoInput = Read-Host "Enter your LazyStackSmfUtil stack's GitHub Repo URL (example: ${LzGitHubLzSmfUtilRepo})"
-if($LzGitHubLzSmfUtilRepoInput -ne "") {
-    $LzGitHubLzSmfUtilRepo = $LzGitHubLzSmfUtilRepoInput
-}
 
 do {
     $LzCodeBuild_PR_Create = "Test_CodeBuild_PR_Create.yaml"
@@ -124,12 +137,8 @@ do {
 }
 until ($true -eq $LzFileFound)
 
-
-
 Write-Host "Please review and confirm the following:"
-Write-Host "    OrgCode: ${LzOrgCode}" 
 Write-Host "    SysCode: ${LzSysCode}"
-Write-Host "    AWS CLI Management Account Profile: ${LzMgmtProfile}"
 Write-Host "    AWS Region: ${LzRegion}"
 Write-Host "    System Test Account name: ${LzTestAcctName}"
 Write-Host "    GitHub Repo URL: ${LzGitHubRepo}"
