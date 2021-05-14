@@ -38,7 +38,6 @@ if("" -eq $LzMgmtProfile) {
 }
 
 $LzRegion = ""
-
 $LzMgmtProfileKey = (aws configure get profile.${LzMgmtProfile}.aws_access_key_id)
 if($LzMgmtProfileKey -eq "") {
     Write-Host "Profile ${LzMgmtProfile} not found or not configured with Access Key"
@@ -53,6 +52,13 @@ if($? -eq $false) {
     Write-Host "${LzMgmtProfile} profile is associated with an IAM User not administering an Organization."
     Exit
 }
+
+$LzPAT = $LzSettings.PersonalAccessToken
+if("" -eq $LzPAT) {
+    Write-Host "No Personal Access Token found in Settings file. Please run SetDefaults."
+    exit
+}
+
 
 if ($LzRegion -eq "") {
     $LzRegion = "us-east-1"
@@ -232,5 +238,8 @@ $LzOut = "Account Name: ${LzAcctName}${nl}"  `
 $LzSettingsFolder = Get-Content -Path "currentorg.txt"
 $LzSettingsFolderPath = Join-Path -Path $LzSettingsFolder -ChildPath "${LzIAMUserName}_welcome.txt"
 $LzOut > $LzSettingsFolderPath
+
+#update GitHub Personal Access Token
+aws codebuild import-source-credentials --server-type GITHUB --auth-type PERSONAL_ACCESS_TOKEN --profile LzAccessRoleProfile --token $LzPAT
 
 Write-Host "Processing Complete"
