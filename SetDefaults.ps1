@@ -40,14 +40,14 @@ if($LzSettingsFound) {
 # Get Defaults from User
 # GitHub Account
 $default = $LzSettings.GitHubAcct
-$LzGitHubAcctInput = Read-Host "GitHub Account Name (default: ${default})"
+$LzGitHubAcctInput = Read-Host "GitHub Account Name (current: ${default})"
 if("" -ne $LzGitHubAcctInput) {
     $LzSettings.GitHubAcct = $LzGitHubAcctInput
 }
 
 # GitHub Personal Access Token
 $default = $LzSettings.PersonalAccessToken
-$LzPATInput = Read-Host "GitHub Personal Access Token (default: ${default})"
+$LzPATInput = Read-Host "GitHub Personal Access Token (current: ${default})"
 if("" -ne $LzPATInput) {Write-Host " ${LzSettings.}"
     $LzSettings.PersonalAccessToken = $LzPATInput
 }
@@ -58,7 +58,7 @@ do {
         $LzSettings.AwsMgmtAccount = $LzSettings.OrgCode + "Mgmt"
     }
     $default = $LzSettings.AwsMgmtAccount
-    $LzAwsMgmtAccountInput = Read-Host "AWS Management Account (default: ${default})"
+    $LzAwsMgmtAccountInput = Read-Host "AWS Management Account (current: ${default})"
     if("" -ne $LzAwsMgmtAccountInput) {
         $LzSettings.AwsMgmtAccount = $LzAwsMgmtAccountInput
     }
@@ -85,21 +85,21 @@ if($LzSettings.LazyStackSmfUtilRepo -eq "") {
     $LzSettings.LazyStackSmfUtilRepo = "https://github.com/${LzGitHubAcct}/LazyStackSmfUtil.git"
 }
 $default = $LzSettings.LazyStackSmfUtilRepo
-$LazyStackSmfUtilRepoInput = Read-Host "LazyStackSmfUtil repository URL (default: ${default})"
+$LazyStackSmfUtilRepoInput = Read-Host "LazyStackSmfUtil repository URL (current: ${default})"
 if("" -ne $LazyStackSmfUtilRepoInput) {
     $LzSettings.LazyStackSmfUtilRepo = $LazyStackSmfUtilRepoInput
 }
 
-Write-Host "Please review and confirm your entries"
-Write-Host "OrgCode: ${LzOrgCode}"
+Write-Host "Please review and confirm your entries:"
+Write-Host "    OrgCode: ${LzOrgCode}"
 $value = $LzSettings.GitHubAcct
-Write-Host "GitHub Account: ${value}"
+Write-Host "    GitHub Account: ${value}"
 $value = $LzSettings.PersonalAccessToken
-Write-Host "GitHub Personal Access token: ${value}"
+Write-Host "    GitHub Personal Access token: ${value}"
 $value = $LzSettings.AwsMgmtAccount
-Write-Host "AWS Management Account: ${value}"
+Write-Host "    AWS Management Account: ${value}"
 $value = $LzSettings.LazyStackSmfUtilRepo
-Write-Host "LazyStackSmfUtil repository URL: ${value}"
+Write-Host "    LazyStackSmfUtil repository URL: ${value}"
 $LzOk = Read-Host "Update Settings y/n"
 
 if("y" -eq $LzOk) {
