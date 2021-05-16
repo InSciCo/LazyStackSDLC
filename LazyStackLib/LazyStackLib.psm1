@@ -1,7 +1,7 @@
 #LazyStackLib.psm1
 
 function Get-LibVersion {
-    return "v1.0.0"
+    "v1.0.0"
 }
 function Read-YesNo {
     Param ([string]$prompt, [boolean]$default=$true, [int]$indent)

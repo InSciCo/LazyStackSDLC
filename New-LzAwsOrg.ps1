@@ -2,7 +2,7 @@
 # We import lib in script directory with -Force each time to ensure lib version matches script version
 # Performance is not an issue with these infrequently executed scripts
 Import-Module (Join-Path -Path (Split-Path $script:MyInvocation.MyCommand.Path) -ChildPath LazyStackLib) -Force
-if(Get-LibVersion -ne "v1.0.0") {
+if((Get-LibVersion) -ne "v1.0.0") {
     Write-Host "Error: Imported LazyStackSMF lib has wrong version!"
     exit
 }
