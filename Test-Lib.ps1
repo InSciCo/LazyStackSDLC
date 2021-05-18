@@ -4,8 +4,13 @@ if((Get-LibVersion) -ne "v1.0.0") {
     Write-Host "Error: Imported LazyStackSMF lib has wrong version!"
     exit
 }
-Write-Host "Test-AwsProfileExists" (Test-AwsProfileExists -profilename "BzMgmt")
-Write-Host "Test-AwsProfileExists" (Test-AwsProfileExists -profilename "nada")
+
+New-LzSysAccount `
+    -LzMgmtProfile T4Mgmt `
+    -LzOUName T4TestOU `
+    -LzAcctName T4TutTest `
+    -LzIAMUserName T4TutTestIAM `
+    -LzRootEmail tmay7657+T4TutTest@gmail.com
 
 
 Write-Host "done"

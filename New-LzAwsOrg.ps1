@@ -7,18 +7,17 @@ if((Get-LibVersion) -ne "v1.0.0") {
     exit
 }
 
-Write-Host "This script creates OrgDevOU, OrgTestOU and OrgProdOU"
-Write-Host "It also writes the initial OrgSettings.json file."
-Write-Host "Note: Press return to accept a default value."
+Write-Host "This script creates OrgDevOU, OrgTestOU and OrgProdOU
+It also writes the initial OrgSettings.json file.
+Note: Press return to accept a default value."
 
 $LzOrgSettings = Get-LzOrgSettings
 
 #OrgCode
-
 $defmsg = Get-DefMessage -current $LzOrgSettings.OrgCode -example "Az"
 $LzOrgSettings.OrgCode = (Read-OrgCode `
--prompt "Enter OrgCode${defmsg}" `
--default $LzOrgSettings.OrgCode)
+    -prompt "Enter OrgCode${defmsg}" `
+    -default $LzOrgSettings.OrgCode)
 
 #AwsMgmtProfile
 do {
@@ -47,13 +46,13 @@ $value = $LzOrgSettings.AwsMgmtProfile
 Write-Host "    AWS CLI Management Account Profile: ${value}"
 
 $LzDevOUName = $LzOrgSettings.OrgCode + "DevOU"
-Write-Host "    Create ${$LzDevOUName} Organizational unit if it doesn't already exist"
+Write-Host "    Create ${LzDevOUName} Organizational unit if it doesn't already exist"
 
 $LzTestOUName = $LzOrgSettings.OrgCode + "TestOU"
-Write-Host "    Create ${$LzTestOUName} Organizational unit if it doesn't already exist"
+Write-Host "    Create ${LzTestOUName} Organizational unit if it doesn't already exist"
 
 $LzProdOUName = $LzOrgSettings.OrgCode + "ProdOU"
-Write-Host "    Create ${$LzProdOUName} Organizational unit if it doesn't already exist"
+Write-Host "    Create ${LzProdOUName} Organizational unit if it doesn't already exist"
 
 $continue = Read-YesNo -prompt "Continue?" -default $true
 if(!$continue) { 
