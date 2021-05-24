@@ -13,60 +13,7 @@ Write-Host " Use this script to setup and manage your LazyStackSMF Organization"
 
 # Settings.yaml file structure
 <# Example
-Sources:
-  GitHub:
-    OrgName: ""
-    Repos:
-      PetStore: ""
-      LazyStackSMF: ""
-    AcctName: ""
-    Type: GitHub
-AWS:
-  MgmtProfile: T4Mgmt
-  DefaultRegion: us-east-1
-  OrgUnits:
-    TestOU: T4TestOU
-    DevOU: T4DevOU
-    ProdOU: T4ProdOU
-Systems:
-  Tut:
-    T4Test:
-      Email: ""
-      OrgUnit: T4TestOU
-      IAMUser: T4TutTestIAM
-      Pipelines:
-        Test_PR_Create:
-          PipelineTemplate: $Pipelines.Test_PR_Create
-        Test_PR_Merge:
-          PipelineTemplate: $Pipelines.Test_PR_Merge
-    T4Prod:
-      Email: ""
-      OrgUnit: T4TProdOU
-      IAMUser: T4TutProdIAM
-      Pipelines:
-        Prod_PR_Merge:
-          PipelineTemplate: $Pipelines.Prod_PR_Merge
-PipelineTemplates:
-  Test_PR_Merge:
-    Region: $AWS.DefaultRegion
-    TemplatePath: ../LazyStackSMF/Test_CodeBuild_PR_Merge.yaml
-    Description: Delete PR Stack on Pull Request Merge
-    UtilRepo: $Sources.GitHub.Repos.LazystackSMF
-    RepoParam: $Sources.GitHub.Repos.PetStore
-  Prod_PR_Merge:
-    RepoParam: $Sources.GitHub.Repos.PetStore
-    Region: $AWS.DefaultRegion
-    UtilRepo: $Sources.GitHub.Repos.LazystackSMF
-    TemplatePath: ../LazyStackSMF/Prod_CodeBuild_PR_Merge.yaml
-    StackName: us-east-1-petstore
-    Description: Update Production Stack on Pull Request Merge
-  Test_PR_Create:
-    Region: $AWS.DefaultRegion
-    TemplatePath: ../LazyStackSMF/Test_CodeBuild_PR_Create.yaml
-    Description: Create PR Stack on Pull Request Creation
-    UtilRepo: $Sources.GitHub.Repos.LazystackSMF
-    RepoParam: $Sources.GitHub.Repos.PetStore
-OrgCode: T4
+
 #>
 
 #default values
@@ -79,14 +26,12 @@ $quit = $false
 do { 
     # This is a very simple state machine. We move among "screens" using the $curScreen value. Some state
     # is passed in addtional variables:
-    #   - $curAction: [Add | Edit | Delete]
     #   - $curSource: this is currently set only to "GitHub" as this is the only Source supported
     #   - $curRepo: current reposistory, example usage: $Org.Sources.$curSource.Repos.$curRepo
     #   - $curSystem: current system, example usage: $Org.Systems.$curSystem
     #   - $curAccount: current system account, example usage $Org.Systems.$curSystem.$curAccount
-    #   - $curPipeline: used in two contexts, example usages
-    #       - $Org.Systems.$curSystem.$curAccount.Pipelines.$curPipeline
-    #       - $Org.PipelineTemplates.$curPipleline
+    #   - $curPipeline: current system account pipeline, example usage $Org.Systems.$curSystem.$curAccount.Pipelines.$curPipeline
+    # Bascially, every "screen" represents an object node in the settings.yaml document.
     switch($curScreen) 
     {
         "Loading" {
@@ -166,29 +111,21 @@ do {
             Write-Host " 3) Edit" ($Org.OrgCode + ".Systems:") (Get-MsgIfNot $hasSystems "(no systems defined yet)")
             Write-PropertyNames $Org.Systems -indent 4
             Write-Host ""
-            <#
-            $hasPipelineTemplates = (Get-SettingsPropertyCount $Org.Pipelines) -gt 0
-            Write-Host " 4) Edit" ($Org.OrgCode + ".PipelineTemplates:") (Get-MsgIfNot $hasPipelineTemplates "(no Pipeline Templates defined yet)")
-            Write-PropertyNames $Org.PipelineTemplates -indent 4
-            Write-Host ""
-            #>
             $selection = Read-MenuSelection -min 1 -max 3 -indent 1 -options "q"
-            $curAction = ""
             switch($selection ) {
                -1 { 
                    $quit = $true
                    break 
                 }
-                1 { $curScreen = "AWSMenu"}
-                2 { $curScreen = "SourceMenu" }
-                3 { $curScreen = "SystemsMenu" }
-                4 { $curScreen = "PipelinesMenu" }
+                1 { $curScreen = "AWS"}
+                2 { $curScreen = "Sources" }
+                3 { $curScreen = "Systems" }
             }
         }
 
-        "AWSMenu" {
+        "AWS" {
             Write-Host ""
-            Write-Host $Org.OrgCode AWS "- Editing Account Information"
+            Write-Host $Org.OrgCode AWS "- Account Information"
             if($Org.AWS.MgmtProfile -eq "") {
                 $Org.AWS.MgmtProfile = $Org.OrgCode + "Mgmt"
             }
@@ -213,9 +150,9 @@ do {
             $curScreen="MainMenu"
         }
 
-        "SourceMenu" {
+        "Sources" {
             Write-Host ""
-            Write-Host $Org.OrgCode $curSource "- Menu"
+            Write-Host $Org.OrgCode Sources GitHub
             Write-Host " 1) Edit Account Information"
             Write-Host "      Management Account Name:" $Org.Sources.$curSource.AcctName 
             Write-Host "      Organziation Name:" $Org.Sources.$curSource.OrgName
@@ -227,13 +164,13 @@ do {
             switch($selection) {
                -1 { $curScreen = "MainMenu" }
                 1 { $curScreen = "Source" }
-                2 { $curScreen = "ReposMenu" }
+                2 { $curScreen = "Repos" }
             }
         }
 
         "Source" {
             Write-Host ""
-            Write-Host $Org.OrgCode $curSource "- Editing Account Information"
+            Write-Host $Org.OrgCode Sources $curSource
 
             $defmsg = Get-DefMessage -current $Org.Sources.$curSource.AcctName
             $Org.Sources.$curSource.AcctName = Read-String `
@@ -249,19 +186,19 @@ do {
                 -indent 4 `
                 -required $true
 
-            $curScreen = "SourceMenu"
+            $curScreen = "Sources"
         }
 
-        "ReposMenu" {
+        "Repos" {
             Write-Host ""
-            Write-Host $Org.OrgCode $curSource "- Editing Repository References"
+            Write-Host $Org.OrgCode Sources $curSource Repos
             $items, $menuSelections, $curItem = Write-PropertySelectionMenu $Org.Sources.$curSource.Repos -indent 4
             $items = [int]$items
             Write-Host ""
             $selection = Read-MenuSelection -max $items -indent 1
             switch ($selection) {
                -1 { # quit
-                    $curScreen = "SourceMenu"
+                    $curScreen = "Sources"
                 }
                 -2 { # Add
                     # Add new repo reference
@@ -276,11 +213,9 @@ do {
                         -property $curRepo `
                         -default ""
 
-                    $curAction="Edit"
                     $curScreen = "Repo"
                 }
                 -3 { # Delete
-                    $curAction = "Delete"
                     $delItem = Read-MenuSelection -max $items -indent 4 -prompt "Which item to delete" -options "q"
                     switch ($delItem) {
                         -1 {
@@ -298,7 +233,6 @@ do {
                 }
                 default {
                     # Update repo reference
-                    $curAction = "Edit"
                     $curRepo = $menuSelections[$selection]
                     $curScreen = "Repo"
                 }
@@ -307,27 +241,137 @@ do {
 
         "Repo" {
             Write-Host ""
-            Write-Host $Org.OrgCode $curSource "- Edit Repository ${curRepo}"
-
-            if($curAction -ne "Edit") {
-                Write-Host "Error: Unknown action ${action} passed to Repo screen"
-                $curScreen = "ReposMenu"
-                continue
-            }
+            Write-Host $Org.OrgCode Sources $curSource Repos $curRepo
 
             $ok, $newRepo = New-Repository -orgName $Org.Sources.$curSource.OrgName
             if($ok) {
                 $orgName.Sources.$curSource.Repos.$curRepo = $newRepo
             }
 
-            $curAction = ""
-            $curRepo = ""
-            $curScreen = "ReposMenu"
+            $curScreen = "Repos"
         }
 
-        "PipelinesMenu" {
+        "Systems" {
             Write-Host ""
-            Write-Host  $Org.OrgCode "- Pipelines Menu"
+            Write-Host $Org.OrgCode Systems 
+            $items, $menuSelections, $curItem = Write-PropertySelectionMenu $Org.Systems
+            Write-Host ""
+            $selection = Read-MenuSelection -min 1 -max $items -indent 1
+            switch ($selection) {
+               -1 { #quit
+                    $curScreen = "MainMenu"
+                }
+               -2 { # Add new System
+
+                    Write-Host " Adding New System"
+                    $curSystem = Read-PropertyName `
+                        -object $Org.Systems `
+                        -prompt "Enter name for System" `
+                        -exists $false `
+                        -indent 4
+        
+                    Add-SettingsProperty `
+                        -object $Org.Systems `
+                        -property $curSystem `
+                        -default ""                
+                    $curScreen = "Accounts"
+                }
+                default {
+                    $curSystem = $menuSelections[$selection]
+                    Write-System $Org.Systems $curSystem
+                    if(Read-YesNo "Edit the System") { 
+                        $curScreen = "System" 
+                    }  else { 
+                        $curScreen = "Systems" 
+                    }
+                }
+            }            
+        }
+
+        "System" {
+            Write-Host ""
+            Write-Host $Org.OrgCode Systems $curSystem
+            $curSystemObj = $Org.Systems.$curSystem 
+            Read-Property $curSystemObj Description 2
+            if(Read-YesNo "Edit System Accounts") {
+                $curScreen = "Accounts" 
+            } else {
+                $curScreen = "Systems"
+            }
+        }
+
+        "Accounts" {
+            Write-Host ""
+            Write-Host $Org.OrgCode Systems $curSystem Accounts
+            Write-Host ""
+            $items, $menuSelections, $curItem = Write-PropertySelectionMenu $curSystemObj.Accounts
+            Write-Host ""
+            $selection = Read-MenuSelection -min 1 -max $items -indent 2 -options "ads"
+            switch($selection) {
+               -1 { #skip
+                    $curScreen = "Systems" 
+                }
+                -2 { #add 
+                    Write-Host " Adding New Account"
+
+                    $accountType = Read-AccountType -indent 4
+
+                    $curAccount = Read-PropertyName `
+                        -object $Org.Accounts `
+                        -prompt "Enter name for Account" `
+                        -exists $false `
+                        -default ($curSystem + $accountType) `
+                        -indent 4
+
+                    $description = ""
+                    Read-Value $description Description 4
+
+                    $email = Read-Email -indent 4
+                    
+                    Add-SettingsProperty `
+                        -object $Org.Accounts `
+                        -property $curAccount `
+                        -default (New-Account $Org.OrgCode $curSystem $accountType $description $email)
+
+                    $curScreen = "Account"  
+
+                }
+                -3 { #delete 
+                    Write-Host "Not yet implemented"
+                    $ok = Read-YesNo "Continue"
+                    $curScreen = "Accounts"
+                }
+                default {
+                    $curAccount = $menuSelections[$selection]
+                    $curScreen = "Account"
+                }
+            }
+        }
+
+        "Account" {
+            Write-Host ""
+            Write-Host $Org.OrgCode Systems $curSystem Accoiunts $curAccount 
+            $curAccountObj = $Org.Systems.$curSystem.Accounts.$curAccount 
+            Write-Account $Org.Systems.$curSystem.Accounts $curAccount -indent 4
+            $edit = Read-YesNo "Edit Account"
+            if($edit) {
+                Read-Value $curAccountObj.Description Description -indent 4
+
+                $defmsg = Get-DefMessage $curAccountObj.Email
+                $curAccountObj.Email = Read-Email "Email${defmsg}" $curAccountObj.Email -indent 4
+
+                Read-Value $curAccountObj.IAMUser IAMUser -indent 4 
+
+                $curScreen = "Pipelines" 
+
+            } else {
+                $curScreen = "Accounts"
+            }
+        }
+
+        "Pipelines" {
+            Write-Host ""
+            Write-Host  $Org.OrgCode Systems $curSystem Accounts $curAccount Pipelines
             $pipelinesObj = $Org.Systems.$curSystem.Accounts.$curAccount.Pipelines
             $items, $menuSelections, $curItem = Write-PropertySelectionMenu $pipelinesObj `
                 -indent 4
@@ -348,12 +392,9 @@ do {
                     -object $pipelinesObj `
                     -property $curTemplate `
                     -default ([PSCustomObject]@{})
-
-                    $curAction ="Edit"
                     $curScreen = "Template"
                 }
                 -3 { #delete
-                    $curAction = "Delete"
                     $delItem = Read-MenuSelection -max $items -indent 4 -prompt "Which item to delete" -options "q"
                     switch ($delItem) {
                         -1 {
@@ -370,7 +411,6 @@ do {
                     }
                 }
                 default {
-                    $curAction = "Edit"
                     $curTemplate = $menuSelections[$selection]
 
                     #Show current Template Properties if template assigned
@@ -399,53 +439,45 @@ do {
                             }
                         }
                     }
-                    $edit = Read-YesNo "Edit the Pipeline"
-                    if($edit) {
-                        $curAction = "Edit"
-                        $curScreen = "Template"
+                    if(Read-YesNo "Edit the Pipeline") {
+                        $curScreen = "Pipeline"
                     } else {
-                        $curAction = ""
-                        $curScreen = "PipelinesMenu"
+                        $curScreen = "Pipelines"
                     }
                 }
             }
         }
 
-        "Template" {
+        "Pipeline" {
             Write-Host ""
-            Write-Host  $Org.OrgCode "- Editing Pipeline Template" $curTemplate
-
-            if($curAction -ne "Edit") {
-                Write-Host "Error: Unknown action ${action} passed to Repo screen"
-                $curScreen = "PipelinesMenu"
-                continue
-            }
+            Write-Host  $Org.OrgCode Systems $curSystem Accounts $curAccount Pipeline $curPipeline 
 
             $pipelinesObj = $Org.Systems.$curSystem.Accounts.$curAccount.Pipelines
+            $curPipelineObj = $pipelinesObj.$curPipeline
 
             #TemplatePath = "../LazyStackSMF/Test_CodeBuild_PR_Create.yaml"
-            $default = $pipelinesObj.$curTemplate.templatePath
+            $default = $curPipelineObj.templatePath
             $defmsg = Get-DefMessage -current $default
             $templatePath = Read-FileName `
                 -prompt "CodeBuild Template File${defmsg}" `
                 -default $default `
                 -indent 4 `
                 -required $true
-            Add-SettingsProperty $pipelinesObj.$curTemplate TemplatePath
-            $pipelinesObj.$curTemplate.TemplatePath = $templatePath
+            Add-SettingsProperty $curPipelineObj TemplatePath
+            $curPipelineObj.TemplatePath = $templatePath
 
             #Description = "Create PR Stack on Pull Request Creation"
-            $default = $pipelinesObj.$curTemplate.Description
+            $default = $curPipelineObj.Description
             $defmsg = Get-DefMessage -current $default
             $description = Read-String `
                 -prompt "Description${defmsg}" `
                 -default $default `
                 -indent 4 
-            Add-SettingsProperty $pipelinesObj.$curTemplate Description
-            $pipelinesObj.$curTemplate.Description = $description
+            Add-SettingsProperty $curPipelineObj Description
+            $curPipelineObj.Description = $description
 
-            Add-SettingsProperty $pipelinesObj.$curTemplate RegionParam 
-            $pipelinesObj.$curTemplate.RegionParam = $regionParam
+            Add-SettingsProperty $curPipelineObj RegionParam 
+            $curPipelineObj.RegionParam = $regionParam
 
             #Read and prompt for Parameters found in template 
             Write-Host "Template Parameters:"
@@ -465,14 +497,14 @@ do {
                     # Default
                     
                     # Check if the template parameter is in the Pipeline object
-                    if(Get-SettingsPropertyExists $pipelinesObj.$curTemplate $name) {
+                    if(Get-SettingsPropertyExists $curPipelineObj $name) {
                         Write-Host "Pipeline value for" $name "parameter"
-                        $default = $pipelinesObj.$curTemplate.$name
+                        $default = $curPipelineObj.$name
                         $defmsg = Get-DefMessage -default $default
                         $default = Read-String `
                             -prompt "${name}${defmsg}" `
                             -default $default
-                            $pipelinesObj.$curTemplate.$name = $default
+                            $curPipelineObj.$name = $default
                     } else {
                         $create = Read-YesNo ("Add pipeline value for " + $name + " parameter")
                         if($create) {
@@ -481,73 +513,14 @@ do {
                             $default = Read-String `
                                 -prompt "${name}${defmsg}" `
                                 -default $default
-                            $pipelinesObj.$curTemplate.$name = $default
-                            Add-SettingsProperty $pipelinesObj.$curTemplate $name $default
+                            $curPipelineObj.$name = $default
+                            Add-SettingsProperty $curPipelineObj $name $default
                         }
                     }
                 }
             }
 
-            $curAction = ""
-            $curTemplate = ""
-            $curScreen = "PipelinesMenu"
-        }
-
-        "SystemsMenu" {
-            Write-Host ""
-            Write-Host " " $Org.OrgCode "- Systems Menu"
-            $items, $menuSelections, $curItem = Write-PropertySelectionMenu $Org.Systems
-            Write-Host ""
-            $selection = Read-MenuSelection -min 1 -max $items -indent 1
-            switch ($selection) {
-               -1 { #quit
-                    $curScreen = "MainMenu"
-                }
-               -2 { # Add new System
-
-                    Write-Host " Adding New System"
-                    $curSystem = Read-PropertyName `
-                        -object $Org.Systems `
-                        -prompt "Enter name for System" `
-                        -exists $false `
-                        -indent 4
-        
-                    Add-SettingsProperty `
-                        -object $Org.Systems `
-                        -property $curSystem `
-                        -default ""                
-                    $curAction = "Edit"
-                    $curScreen = "System"
-                }
-                default {
-                    $curSystem = $menuSelections[$selection]
-                    Write-System $Org.Systems $curSystem
-
-                    $edit = Read-YesNo "Edit the System"
-                    if($edit) {
-                        $curAction = "edit"
-                        $curScreen = "System"
-                    } else {
-                        $curAction = ""
-                        $curScreen = "SystemsMenu"
-                    }
-                }
-            }            
-        }
-
-        "System" {
-            Write-Host ""
-            Write-Host $Org.OrgCode "- Edit System" $curSystem
-            $curSystemObj = $Org.Systems.$curSystem 
-            $defmsg = Get-DefMessage $curSystemObj.Description 
-            $curSystemObj.Description = Read-String `
-                -prompt "Description${defmsg}" `
-                -default $curSystemObj.Description
-                -indent 2
-
-            
-
-            Read-String "system edit proxy"
+            $curScreen = "Pipelines"
         }
 
         default {

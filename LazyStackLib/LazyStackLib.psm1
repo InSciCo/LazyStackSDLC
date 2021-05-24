@@ -48,7 +48,7 @@ function Read-MenuSelection{
         [int]$min=1,
         [int]$max,
         [int]$indent=0,
-        [string]$options="adq", 
+        [string]$options="adqs", 
         [int]$default=0)
     $indentstr = " " * $indent
     if($max -gt 0) {
@@ -64,6 +64,7 @@ function Read-MenuSelection{
             'd' { $op += "D)elete" }
             'q' { $op += "Q)uit" }    
             'c' { $op += "C)lear" }       
+            's' { $op += "S)kip" }       
             '#' { $op += "#" }
             default {
                 Write-Host "Error: Read-MenuSelect passed bad -options specification |${options}|"
@@ -79,6 +80,7 @@ function Read-MenuSelection{
         try {
             $selection = Read-Host ($indentstr + $prompt + $op)
             if($opArray -contains 'q' -And $selection -eq "q"){ return  -1 }
+            if($opArray -contains 's' -And $selection -eq "s"){ return  -1 }
             if($opArray -contains 'a' -And $selection -eq "a") { return -2 }
             if($opArray -contains 'd' -And $selection -eq "d" -And $max -gt 0) { return -3 }
             if($opArray -contains 'c' -And $selection -eq 'c') {return -4}
@@ -102,11 +104,11 @@ function Read-MenuSelection{
     } until ($false)
 }
 function Read-Email {
-    Param ([string]$prompt,[string]$default, [int]$indent)
+    Param ([string]$prompt="Email",[string]$default, [int]$indent)
     $indentstr = " " * $indent
     Write-Host "${indentstr}Note: An email address can only be associated with one AWS Account."
     do {
-        $email = Read-Host $prompt
+        $email = Read-Host "${indentstr}${prompt}"
         if($email -eq ""){
             $email = $default
         }
@@ -321,9 +323,22 @@ function Add-SettingsProperty {
         }
     }
 }
+
+Function Read-Value {
+    param([object]$object, [string]$name, [int]$indent)
+    $defmsg = Get-DefMessage $object
+    $object = Read-String `
+        -prompt "${name}${defmsg}" `
+        -default $object `
+        -indent $indent       
+}
 function Read-Property {
     param([object]$object, [string]$property, [int]$indent)
-
+    $defmsg = Get-DefMessage $object.$property
+    $object.$property = Read-String `
+        -prompt "${property}${defmsg}" `
+        -default $object.$property `
+        -indent $indent   
 }
 function Get-SettingsPropertyExists {
     param([PSObject]$object, [string]$property)
@@ -454,52 +469,59 @@ function Get-LzSettings {
         Add-SettingsProperty `
             -object $org.Systems.$tutSystem.Accounts `
             -property ($OrgCode + "TutTest") `
-            -default ([PSCustomObject]@{
-                Description = "Tutorial Test Account"
-                OrgUnit = $OrgCode + "TestOU"
-                Email = ""
-                IAMUser = $OrgCode + "TutTestIAM"
-                Pipelines = [PSCustomObject]@{
-                    Test_PR_Create = [PSCustomObject]@{
-                        Description = "Create PR Stack on Pull Request Creation"
-                        TemplatePath = "../LazyStackSMF/Test_CodeBuild_PR_Create.yaml"
-                        RepoParam = ""
-                        UtilRepoParam = ""
-                        RegionParam = ""
-                    }
-                    Test_PR_Merge = [PSCustomObject]@{
-                        Description = "Delete PR Stack on Pull Request Merge"
-                        TemplatePath = "../LazyStackSMF/Test_CodeBuild_PR_Merge.yaml"
-                        RepoParam = ""
-                        UtilRepoParam = ""
-                        RegionParam = ""
-                    }
-                }
-            })
+            -default (New-Account $OrgCode $tutSystem Test "Tutorial System Test Account" "")
 
         #Tutorial Prod Account
         Add-SettingsProperty `
             -object $org.Systems.$tutSystem.Accounts `
             -property ($OrgCode + "TutProd") `
-            -default ([PSCustomObject]@{
-                Description = "Tutorial Production Account"
-                OrgUnit = $OrgCode + "TProdOU"
-                Email = ""
-                IAMUser = $OrgCode + "TutProdIAM"
-                Pipelines = [PSCustomObject]@{
-                    Prod_PR_Merge = [PSCustomOBject]@{
-                        Description = "Update Production Stack on Pull Request Merge"
-                        TemplatePath = "../LazyStackSMF/Prod_CodeBuild_PR_Merge.yaml"
-                        RepoParam = ""
-                        UtilRepo = ""
-                        RegionParam = ""
-                        StackNameParam = ""
-                    }
-                }
-            })
+            -default (New-Account $OrgCode $tutSystem Prod "Tutorial System Production Account" "")
 
     return $org
 }
+
+function New-Account {
+    param([string]$orgCode, [string]$curSystem, [string]$accountType, [string]$description, [string]$email)
+
+    $account = ([PSCustomObject]@{
+        Type=$accountType
+        Description = $description
+        OrgUnit = ($orgCode + $accountType + "OU")
+        Email = $email
+        IAMUser = ($curSystem + $accountType + "IAM")
+        Pipelines = [PSCustomObject]@{}
+    })
+
+    #create default pipelines
+    $pipelinesObj = $account.Pipelines
+    switch($accountType) {
+        "Test" {
+            
+            Add-SettingsProperty $pipelinesObj Test_PR_Create ([PSCustomOBject]@{
+                Description = "Create PR Stack on Pull Request Creation"
+                TemplatePath = "../LazyStackSMF/Test_CodeBuild_PR_Create.yaml"
+                })
+            
+            Add-SettingsProperty $pipelinesObj Test_PR_Merge ([PSCustomOBject]@{
+                Description = "Delete PR Stack on Pull Request Merge"
+                TemplatePath = "../LazyStackSMF/Test_CodeBuild_PR_Merge.yaml"
+                })
+
+        }
+        "Prod" {
+            Add-SettingsProperty $pipelinesObj Prod_PR_Merge ([PSCustomOBject]@{
+                Description = "Update Production Stack on Pull Request Merge"
+                TemplatePath = "../LazyStackSMF/Prod_CodeBuild_PR_Merge.yaml"
+                })
+        }
+        "Dev" {
+
+        }
+    }
+    return $account
+}
+
+
 function Set-LzSettings {
     param ([PSCustomObject]$settings, [string]$filename="Settings.yaml")
     if($null -eq $settings ) {
@@ -986,30 +1008,56 @@ function Publish-LzCodeBuildProject {
         --region $LzRegion
 }
 
+function Read-AccountType {
+    param([string]$default, [int]$indent)
+    $indentstr = " " * $indent
+    $defmsg = Get-DefMessage -default $default
+    Write-Host "${indentstr}1) System Test Account"
+    Write-Host "${indentstr}2) System Production Account"
+    $selection = Read-MenuSelection -min 1 -max 2 -prompt "Type ${defmsg}" -indent $indent -options ""
+    switch($selection) {
+        1 {return "Test"}
+        2 {return "Prod"}
+    }
+}
+
 function Write-System {
     param ([PSCustomObject]$object, [string]$curSystem, [int]$indent)
-    $curSystemObj = $object.$curSystem 
+    $systemObj = $object.$curSystem 
 
     $indentstr = " " * $indent
     Write-Host "${indentstr}System:" $curSystem 
-    Write-Host "${indentstr}Description:" $curSystemObj.Description
-    Write-Host "${indentstr}Accounts:"
-    $curSystemObj.Accounts  | Get-Member -MemberType NoteProperty | ForEach-Object {
-        Write-Account $curSystemObj.Accounts $_.Name ($indent + 2) 
-    }
+    Write-Host "${indentstr}  Description:" $systemObj.Description
+    Write-Accounts $object.$curSystem ($indent + 2)
 }
+
+function Write-Accounts {
+    param([PSCustomObject]$systemObj, [int]$indent)
+    $indentstr = " " * $indent
+    Write-Host "${indentstr}Accounts:"
+    $systemObj.Accounts  | Get-Member -MemberType NoteProperty | ForEach-Object {
+        Write-Account $systemObj.Accounts $_.Name ($indent + 2) 
+    }    
+}
+
 
 function Write-Account {
     param([PSCustomObject]$object, [string]$curAccount, [int]$indent)
     $indentStr = " " * $indent
-    $curAccountObj = $object.$curAccount
+    $accountObj = $object.$curAccount
     Write-Host "${indentstr}Account:" $curAccount
-    Write-Host "${indentstr}  OrgUnit:" $curAccountObj.OrgUnit 
-    Write-Host "${indentstr}  Email:" $curAccountObj.Email 
-    Write-Host "${indentstr}  IAMUser:" $curAccountObj.IAMUser
-    Write-Host "${indentstr}  Pipelines:"
-    $curAccountObj.Pipelines  | Get-Member -MemberType NoteProperty | ForEach-Object {
-        Write-Pipeline $curAccountObj.Pipelines $_.Name ($indent + 4)
+    Write-Host "${indentstr}  OrgUnit:" $accountObj.OrgUnit 
+    Write-Host "${indentstr}  Email:" $accountObj.Email 
+    Write-Host "${indentstr}  IAMUser:" $accountObj.IAMUser
+    Write-Pipelines $accountObj ($indent + 2)
+}
+
+function Write-Pipelines {
+    param([PSCustomObject]$accountObj, [int]$indent )
+    $indentstr = " " * $indent
+    Write-Host "${indentstr}Pipelines:"
+    $accountObj.Pipelines | Get-Member -MemberType NoteProperty | ForEach-Object {
+        Write-Pipeline $accountObj.Pipelines $_.Name ($indent + 2)
     }
 }
 
