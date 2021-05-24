@@ -1,11 +1,11 @@
 AWSTemplateFormatVersion: "2010-09-09"
 Description: Template creates Codebuild resources for a simple SAM Application
 Parameters:
-  GitHubRepoParam:
+  RepoParam:
     Type: String
     Description: Enter the GitHub URL for the repo
 
-  GitHubLzSmfUtilRepoParam:
+  UtilRepoParam:
     Type: String
     Description: Enter the GitHub URL for the LzSmfRepo
 

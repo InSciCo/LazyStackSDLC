@@ -14,9 +14,9 @@ function Read-YesNo {
     do {
         $value = Read-Host "${indentstr}${prompt}${defmsg}"
         switch ($value) {
-            "y" { return ,$true}
-            "n" { return ,$false}
-            "" {return, $default}
+            "y" { return $true}
+            "n" { return $false}
+            "" {return $default}
         }
     } until ($false)
 }
@@ -40,32 +40,40 @@ function Read-Int {
         }
     } until ($isvalid)
    
-    return ,$intvalue
+    return $intvalue
 }
 function Read-MenuSelection{
-    param([string]$prompt="Select",[int]$min=1,[int]$max,[int]$indent=0,[string]$options="adq")
+    param(
+        [string]$prompt="Select",
+        [int]$min=1,
+        [int]$max,
+        [int]$indent=0,
+        [string]$options="adq", 
+        [int]$default=0)
     $indentstr = " " * $indent
     if($max -gt 0) {
         $options += "#"
     }
     $options = $options.ToLower()
     $opArray = $options.ToCharArray()
-    $firstOption = $true
     $op = ""
     foreach($option in $opArray){
-        if(!$firstOption) {$op += ", "}
+        if($op.Length -gt 0) {$op += ", "}
         Switch($option) {
             'a' { $op += "A)dd"}
             'd' { $op += "D)elete" }
-            'q' { $op += "Q)uit" }            
+            'q' { $op += "Q)uit" }    
+            'c' { $op += "C)lear" }       
             '#' { $op += "#" }
             default {
                 Write-Host "Error: Read-MenuSelect passed bad -options specification |${options}|"
             }
         }
-        $firstOption =$false
     }
-    if($op.Length -gt 0) {$op = " [" + $op + "]"}
+    if($op.Length -gt 0) {$op = " [ " + $op + " ]"}
+    if($default -gt 0) {
+        $op += "(${default})"
+    }
 
     do{
         try {
@@ -73,10 +81,16 @@ function Read-MenuSelection{
             if($opArray -contains 'q' -And $selection -eq "q"){ return  -1 }
             if($opArray -contains 'a' -And $selection -eq "a") { return -2 }
             if($opArray -contains 'd' -And $selection -eq "d" -And $max -gt 0) { return -3 }
+            if($opArray -contains 'c' -And $selection -eq 'c') {return -4}
             if($max -ge $min) {
-                $selection = [int]$selection
+                if($selection -eq "") {
+                    $selection = $default
+                } else {
+                    $selection = [int]$selection
+                }
+    
                 if($selection -lt $min -Or $selection -gt $max) {
-                    Write-Host ($indentstr + "Selection value must be between ${min} and ${max}")
+                    Write-Host ($indentstr + "Selection value min: ${min} and max: ${max}")
                 } else {
                     return $selection
                 }
@@ -98,7 +112,7 @@ function Read-Email {
         }
         try {
             $null = [mailaddress]$email
-            Return, $email
+            return $email
         }
         catch {
             Write-Host "${indentstr}Invalid Email address entered! Please try again."
@@ -106,7 +120,12 @@ function Read-Email {
     } until ($false)
 }
 function Read-String {
-    Param ([string]$prompt, [string]$default, [int]$indent, [boolean]$required = $false)
+    Param (
+        [string]$prompt, 
+        [string]$default, 
+        [int]$indent, 
+        [boolean]$required = $false, 
+        $propName=$false)
     $indentstr = " " * $indent
     do {
         if("" -ne $default) {
@@ -119,7 +138,13 @@ function Read-String {
         if($required -And $value -eq "") {
             Write-Host "${indentstr}Value can't be empty. Please try again."
         } else { 
-            return ,$value
+            if($propName -And !($value -match "^[a-zA-z][a-zA-Z0-9_]*[a-zA-Z0-9]$")) {
+                Write-Host "${indentstr}Sorry. Please enter a valid Property name. "
+                Write-Host "${indentstr}Propertynames must begin with an Alpha, contain only Alphanumerics and '_'"
+            }
+            else {
+                return $value
+            }
         }
     } until ($false)
 }
@@ -133,9 +158,9 @@ function Read-FileName {
             if(!$found) {
                 Write-Host "${indentstr}Sorry, that file was not found. Please try again."
             }
-        } else { return ,""}
+        } else { return ""}
     } until ($found)
-    return , $strinput
+    return  $strinput
 }
 function Read-OrgCode {
     Param ([string]$prompt, [string]$default, [int]$indent)
@@ -151,41 +176,41 @@ function Read-OrgCode {
             }
         }
         if($value -ne "") {
-            return ,$value
+            return $value
         }
     } until ($false)
 }
 function Get-DefaultString {
     param ([string]$current, [string]$default)
     if($current -ne "") {
-        return ,$current
+        return $current
     }
-    return ,$default
+    return $default
 }
 function Get-MsgIf {
     param ([bool]$boolval, [string]$msg)
     if($boolval) {
-        return ,$msg
-    } else { return ,""}
+        return $msg
+    } else { return ""}
 }
 function Get-MsgIfNot {
     param ([bool]$boolval, [string]$msg)
     if(!$boolval) {
-        return ,$msg
-    } else { return ,""}
+        return $msg
+    } else { return ""}
 }
 function Get-DefMessage {
     Param ([string]$current, [string]$default, [string]$example)
     if($current -ne "") {
-        return, " (current: ${current})"
+        return " (current: ${current})"
     }
     if($default -ne "") {
-        return ," (default: ${default})"
+        return " (default: ${default})"
     }
     if ($example -ne "") {
-        return ," (example: ${example})"
+        return " (example: ${example})"
     }
-    return, ""
+    return ""
 }
 function Get-RepoShortName {
     param([string]$repourl)
@@ -193,7 +218,13 @@ function Get-RepoShortName {
     $LzRepoShortName=$urlparts[$urlparts.Count - 1]
     $LzRepoShortName=$LzRepoShortName.Split('.')
     $LzRepoShortName=$LzRepoShortName[0].ToLower()    
-    return ,$LzRepoShortName
+    return $LzRepoShortName
+}
+function Get-ValueOrMsg {
+    param([string]$value, [string]$msg)
+    if($value -eq "") {
+        return $msg
+    } else {return $value}
 }
 function Test-AwsProfileExists {
     param ([string]$profilename)
@@ -202,38 +233,43 @@ function Test-AwsProfileExists {
 }
 function Get-IsRegionAvailable {
     param ([string]$mgmtAcctProfile, [string]$regionName)
-    $regions = aws ec2 describe-regions --all-regions --profile $mgmtAcctProfile | ConvertFrom-Json
+    $regions = Invoke-Expression "aws ec2 describe-regions --all-regions --profile ${mgmtAcctProfile}" | ConvertFrom-Json
     $region = $regions.Regions | Where-Object RegionName -EQ $regionName
-    return , $null -ne $region
+    return  $null -ne $region
 }
 function Read-AwsRegion {
     param ([string]$mgmtAcctProfile, [string]$prompt="Enter AWS Region", [string]$default, [int]$indent)
-    $indentstr = " " * $indent1
-    if("" -ne $default) { $defstr = "(${default})"} else {$defstr = ""}
+    $indentstr = " " * $indent
+    if("" -ne $default) { $defstr = " (${default})"} else {$defstr = ""}
     do {
-        $regionname = Read-Host "${indentstr}${prompt}${defstr}"
+        $regionname = Read-String `
+            -prompt "${prompt}${defstr}" `
+            -default $default `
+            -indent $indent
         $found = Get-IsRegionAvailable -mgmtAcctProfile $mgmtAcctProfile -regionName $regionname
         if(!$found) {
             Write-Host "${indentstr}Sorry, that region is not available. Please try again."
         }
     } until ($found)
-    return ,$regionName
+    return $regionName
 }
 function Read-AwsProfileName {
     param ([string]$prompt, [string]$default, [int]$indent=0)
+    Write-Host "default=" $default
     $indentstr = " " * $indent
     do {
         $inputvalue = (Read-String `
             -prompt $prompt `
             -default $default `
             -indent $indent) 
+
         $found = Test-AwsProfileExists -profilename $inputvalue
         if(!$found) {
             Write-Host "${indentstr}AWS AWS CLI Managment Account Profile ${inputvalue} Not Found!"        
             Write-Host "${indentstr}Please try again."
         }
     } until ($found)    
-    return ,$inputvalue
+    return $inputvalue
 }
  function Get-AwsOrgRootId{
     param([string]$mgmtAcctProfile)
@@ -243,11 +279,11 @@ function Read-AwsProfileName {
     $output = $output.Replace(" ", "")
     # Catch error by examining return
     if($output.Substring(2,5) -ne "Roots") {
-        return , ""
+        return  ""
     }
     $LzRoots = $output | ConvertFrom-Json 
     $LzRootId = $LzRoots.Roots[0].Id
-    return ,$LzRootId
+    return $LzRootId
  }
 function Get-SettingsPropertyCount {
     param($object, [string]$property)
@@ -285,6 +321,10 @@ function Add-SettingsProperty {
         }
     }
 }
+function Read-Property {
+    param([object]$object, [string]$property, [int]$indent)
+
+}
 function Get-SettingsPropertyExists {
     param([PSObject]$object, [string]$property)
     if($null -eq $object) { 
@@ -314,6 +354,9 @@ function Remove-SettingsProperty {
         Write-Host "Error: null object passed to Remove-SettingsProperty"
         exit
     }
+    if($property -eq "") {
+        return
+    }
 
     switch($object.GetType().Name) {
         "HashTable" {
@@ -333,6 +376,19 @@ function Remove-SettingsProperty {
         }
     }    
 }
+
+function Get-TemplateParameters {
+    param([string]$templatePath)
+    if(Test-Path $templatePath) {
+        #Read the yaml file and get the parameters
+        $template = (Get-Content $templatePath | ConvertFrom-Yaml | ConvertTo-Json -Depth 100 | ConvertFrom-Json)
+        $parameters = $template.Parameters 
+        return $parameters
+    } else {
+        Write-Host "Warning: ${templatePath} was not found"
+    }
+}
+
 function Get-LzSettings {
     param ([string]$filename="Settings.yaml")
 
@@ -342,7 +398,7 @@ function Get-LzSettings {
         # note: ConvertFrom-Json returns a PSCustomObject
         # We need a consistent format so covert twice to always have a PSCustomObject
         $org = Get-Content $filename | ConvertFrom-Yaml | ConvertTo-Json -Depth 100 | ConvertFrom-Json 
-        return ,$org
+        return $org
     } else {
         Write-Host "   Creating new settings file:"
         # Create default Settings object
@@ -358,7 +414,6 @@ function Get-LzSettings {
             -prompt "Enter AWS CLI Managment Account (default: ${default})" `
             -default $default `
             -indent 4
-
 
         $org = [PSCustomObject]@{
             OrgCode=$OrgCode
@@ -382,66 +437,68 @@ function Get-LzSettings {
                     }
                 }
             }
-            PipelineTemplates = [PSCustomObject]@{
-                Test_PR_Create = [PSCustomObject]@{
-                    Description = "Create PR Stack on Pull Request Creation"
-                    TemplatePath = "../LazyStackSMF/Test_CodeBuild_PR_Create.yaml"
-                    RepoParam = '$Sources.GitHub.Repos.PetStore'
-                    UtilRepo = '$Sources.GitHub.Repos.LazystackSMF'
-                    Region = '$AWS.DefaultRegion'
+            Systems = [PSCustomObject]@{}
+            }
+
+        #Tutorial System
+        $tutSystem = ($OrgCode + "Tut")
+        Add-SettingsProperty `
+            -object $org.Systems `
+            -property $tutSystem `
+            -default ([PSCustomObject]@{
+                Description = "Tutorial System"
+                Accounts = [PSCustomObject]@{}
+        })
+
+        #Tutorial Test Account
+        Add-SettingsProperty `
+            -object $org.Systems.$tutSystem.Accounts `
+            -property ($OrgCode + "TutTest") `
+            -default ([PSCustomObject]@{
+                Description = "Tutorial Test Account"
+                OrgUnit = $OrgCode + "TestOU"
+                Email = ""
+                IAMUser = $OrgCode + "TutTestIAM"
+                Pipelines = [PSCustomObject]@{
+                    Test_PR_Create = [PSCustomObject]@{
+                        Description = "Create PR Stack on Pull Request Creation"
+                        TemplatePath = "../LazyStackSMF/Test_CodeBuild_PR_Create.yaml"
+                        RepoParam = ""
+                        UtilRepoParam = ""
+                        RegionParam = ""
+                    }
+                    Test_PR_Merge = [PSCustomObject]@{
+                        Description = "Delete PR Stack on Pull Request Merge"
+                        TemplatePath = "../LazyStackSMF/Test_CodeBuild_PR_Merge.yaml"
+                        RepoParam = ""
+                        UtilRepoParam = ""
+                        RegionParam = ""
+                    }
                 }
-                Test_PR_Merge = [PSCustomObject]@{
-                    Description = "Delete PR Stack on Pull Request Merge"
-                    TemplatePath = "../LazyStackSMF/Test_CodeBuild_PR_Merge.yaml"
-                    RepoParam = '$Sources.GitHub.Repos.PetStore'
-                    UtilRepo = '$Sources.GitHub.Repos.LazystackSMF'
-                    Region = '$AWS.DefaultRegion'
+            })
+
+        #Tutorial Prod Account
+        Add-SettingsProperty `
+            -object $org.Systems.$tutSystem.Accounts `
+            -property ($OrgCode + "TutProd") `
+            -default ([PSCustomObject]@{
+                Description = "Tutorial Production Account"
+                OrgUnit = $OrgCode + "TProdOU"
+                Email = ""
+                IAMUser = $OrgCode + "TutProdIAM"
+                Pipelines = [PSCustomObject]@{
+                    Prod_PR_Merge = [PSCustomOBject]@{
+                        Description = "Update Production Stack on Pull Request Merge"
+                        TemplatePath = "../LazyStackSMF/Prod_CodeBuild_PR_Merge.yaml"
+                        RepoParam = ""
+                        UtilRepo = ""
+                        RegionParam = ""
+                        StackNameParam = ""
+                    }
                 }
-                Prod_PR_Merge = [PSCustomObject]@{
-                    Description = "Update Production Stack on Pull Request Merge"
-                    TemplatePath = "../LazyStackSMF/Prod_CodeBuild_PR_Merge.yaml"
-                    RepoParam = '$Sources.GitHub.Repos.PetStore'
-                    UtilRepo = '$Sources.GitHub.Repos.LazystackSMF'
-                    Region = '$AWS.DefaultRegion'
-                    StackName = 'us-east-1-petstore'
-                }
-            }
-            Systems = [PSCustomObject]@{
-                Tut = [PSCustomObject]@{}
-            }
-        }
+            })
 
-    $testAccount = [PSCustomObject]@{
-        OrgUnit = $OrgCode + "TestOU"
-        Email = ""
-        IAMUser = $OrgCode + "TutTestIAM"
-        Pipelines = [PSCustomObject]@{
-            Test_PR_Create = [PSCustomObject]@{
-                PipelineTemplate = '$Pipelines.Test_PR_Create'
-            }
-            Test_PR_Merge = [PSCustomObject]@{
-                PipelineTemplate = '$Pipelines.Test_PR_Merge'
-            }
-        }
-    }
-    $acctName = $OrgCode + "Test"
-    Add-SettingsProperty $org.Systems.Tut $acctName $testAccount
-
-    $prodAccount = [PSCustomObject]@{
-        OrgUnit = $OrgCode + "TProdOU"
-        Email = ""
-        IAMUser = $OrgCode + "TutProdIAM"
-        Pipelines = [PSCustomObject]@{
-            Prod_PR_Merge = [PSCustomOBject]@{
-                PipelineTemplate = '$Pipelines.Prod_PR_Merge'
-            }
-        }
-    }
-
-    $acctName = $OrgCode + "Prod"
-    Add-SettingsProperty $org.Systems.Tut $acctname $prodAccount 
-
-    return ,$org
+    return $org
 }
 function Set-LzSettings {
     param ([PSCustomObject]$settings, [string]$filename="Settings.yaml")
@@ -515,28 +572,42 @@ function Write-PropertySelectionMenu {
     [string]$selectItemPrompt="",`
     [string]$ifNoneMsg="(none defined yet)", `
     [int]$item=0, `
-    [int]$indent)
+    [int]$indent, `
+    [string]$curSelection="")
     
     if($null -eq $object -Or $object.GetType().Name -ne "PSCustomObject" ) { return 0}
     $indentstr = " " * $indent
     $hasItems = (Get-SettingsPropertyCount $object) -gt 0
+    $curSelectionItem = 0
     if($hasItems) {
         $menuSelections = @{}
         $object | Get-Member -MemberType NoteProperty | ForEach-Object {
             $item = $item + 1 
             $val = $_.Name
-            
-            Write-Host ($indentstr + "${item})" + ${selectItemPrompt} + $val)
+            $foregroundcolor = (get-host).ui.rawui.ForegroundColor
+            $backgroundcolor = (get-host).ui.rawui.BackgroundColor
+            if($curSelection -eq $val) {
+                $curSelectionItem = $item
+                $saveColor = $foregroundcolor
+                $foregroundcolor = $backgroundcolor 
+                $backgroundcolor = $savecolor
+            }
+            Write-Host ($indentstr + "${item}) ") -NoNewLine
+            Write-Host (${selectItemPrompt} + $val) -ForegroundColor $foregroundcolor -BackgroundColor $backgroundcolor
             $menuSelections.Add($item,$val)
         }
     } else {
         Write-Host "${indentstr}(No Items)"
     }
-    return $item, $menuSelections
+    return $item, $menuSelections, $curSelectionItem
 } 
 
 function Read-PropertyName {
-    param ([PSCustomObject]$parentObject,[string]$prompt="Name", [string]$propertyName="", [bool]$exists=$false, [int]$indent=0)
+    param ([PSCustomObject]$object,[string]$prompt="Name", [string]$propertyName="", [bool]$exists=$false, [int]$indent=0)
+    if($null -eq $object -Or $object.GetType().Name -ne "PSCustomObject" )  {
+        Write-Host "Error: Read-PropertyName, parentObject parameter null or not PSCustomObject"
+        exit
+    }
 
     $indentstr = " " * $indent 
     $default = $propertyName
@@ -545,18 +616,20 @@ function Read-PropertyName {
         $propertyName = Read-String `
             -prompt "${prompt}${defmsg}" `
             -indent $indent `
-            -default $propertyName
-        $found = $parentObject.PSObject.Members.Match($propertyName,'NoteProperty').Count -eq 1
-        $ok = ($found -And $exists) 
+            -default $propertyName `
+            -propName $true
+
+        $found = $object.PSObject.Members.Match($propertyName,'NoteProperty').Count -eq 1
+        $ok = ($found -eq $exists) 
         if(!$ok) {
-            if($exists) { 
-                Write-Host "${indentstr}Sorry, that name does not exist. Please try again."
+            if($found) { 
+                 Write-Host "${indentstr}Sorry, that name does not exist. Please try again."
             } else {
                 Write-Host "${indentstr}Sorry, That name already exists. Please try again."
             }
         }
     } until ($ok)
-    return ,$propertyName
+    return $propertyName
 }
 function Read-Repo {
     param ([string]$prompt, [string]$owner, [string]$reponame, [bool]$exists=$false, [int]$indent=0)
@@ -564,7 +637,7 @@ function Read-Repo {
     do {
         $defmsg = Get-DefMessage -default $owner 
         $owner = Read-String `
-            -prompt ($indentStr + $prompt + "Owner${defmsg}") ` 
+            -prompt ($indentStr + $prompt + "Owner${defmsg}") `
             -default $owner
         $defmsg = Get-DefMessage -default $reponame
         $reponame = Read-String `
@@ -587,25 +660,31 @@ function Read-Repo {
     return  $owner, $reponame, $repo
 }
 function Set-GhSession {
+    param( [bool]$exitOnError=$true)
     $found = Test-Path "GitAdminToken.pat"
     if(!$found)  {
         Write-Host "Missing GitAdminToken.pat file." 
         exit
     }
-    [string]$output = (Get-Content GitAdminToken.pat | gh auth login --with-token) 2>&1 
+    [string]$output = (Get-Content GitAdminToken.pat | gh auth login --with-token 2>&1)
     if($null -ne $output) {
         $firstToken = $output.split(' ')[0]
         if($firstToken -eq "error") {
-            Write-Host "gh could not authenticate with token provided."
-            exit
+            if($exitOnError) {
+                Write-Host "gh could not authenticate with token provided."
+                exit
+            } else {
+                return $false
+            }
         }
     }
-    gh auth status
+    # gh auth status
+    return $true
 }
 
 function Get-GitHubRepoURL {
     param ([string]$reponame)
-    return , "https://github.com/" + $reponame + ".git"
+    return  "https://github.com/" + $reponame + ".git"
 }
 
 function Get-GitHubRepoExists {
@@ -613,17 +692,14 @@ function Get-GitHubRepoExists {
     [string]$output = (gh repo view $reponame)  2>&1
     $output = $output.Substring(0,5)
     # valid responses will start with "name: ", anything else is an error
-    return , ($output -eq "name:")
+    return  ($output -eq "name:")
 }
 
-function New-Repositry {
+function New-Repository {
     param (
         [string]$orgName
     )
-    Write-Host ""
-    Write-Host "Add Stack"
-    $orgName = $LzOrgSettings.GitHubOrgName
-    Write-Host "    Repository creation options:k
+    Write-Host "    Repository creation options:
     1. Create Tutorial Stack (ex: gh repo create ${orgName}/PetStore -p InSciCo/PetStore -y -private)
     2. Create from repository template (ex: gh repo create ${orgName}/newrepo -p ${orgName}/templaterepo -y -private)
     3. Reference an existing repository"
@@ -639,13 +715,13 @@ function New-Repositry {
 
         1 {
             $sourceRepo = "InSciCo/PetStore"
-            $targetOwner=$OrgName
+            $targetOwner=$orgName
             $defmsg = Get-DefMessage -default "PetStore"
             $targetOwner, $targetReponame, $targetRepo = Read-Repo `
                 -prompt "New Repository" `
                 -owner $orgName `
                 -reponame "PetStore" `
-                -indent 4
+                -indent 4 
 
 
             Write-Host "    This option creates a LazyStack PetStore tutorial repository in your GitHub Organization"
@@ -657,13 +733,13 @@ function New-Repositry {
             Write-Host "    This option creates a new repository from a template repository"
             $owner, $reponame, $sourceRepo = Read-Repo `
                 -prompt "Source Template Repository " `
-                -owner $Org.GitHubOrgName `
+                -owner $orgName `
                 -exists $true `
                 -indent 4
 
             $targetOwner, $targetReponame, $targetRepo = Read-Repo `
                 -prompt "New Repository " `
-                -owner $Org.GitHuborgName `
+                -owner $orgName `
                 -exists $false `
                 -indent 4
 
@@ -673,7 +749,7 @@ function New-Repositry {
             Write-Host "This option configures the stack to use an existing repository"
             $targetOwner, $targetReponame, $targetRepo = Read-Repo `
                 -prompt "Existing Repository " `
-                -owner $Org.GitHubOrgName `
+                -owner $orgName `
                 -exists $true `
                 -indent 4
         }
@@ -887,7 +963,7 @@ function New-LzSysAccount {
     $LzPat = Get-Content -Path GitCodeBuildToken.pat
     aws codebuild import-source-credentials --server-type GITHUB --auth-type PERSONAL_ACCESS_TOKEN --profile LzAccessRoleProfile --token $LzPAT
 
-    return ,$true
+    return $true
 }
 function Publish-LzCodeBuildProject {
     param (
@@ -908,4 +984,58 @@ function Publish-LzCodeBuildProject {
         --parameter-overrides $LzTemplateParameters `
         --profile $LzAwsProfile `
         --region $LzRegion
+}
+
+function Write-System {
+    param ([PSCustomObject]$object, [string]$curSystem, [int]$indent)
+    $curSystemObj = $object.$curSystem 
+
+    $indentstr = " " * $indent
+    Write-Host "${indentstr}System:" $curSystem 
+    Write-Host "${indentstr}Description:" $curSystemObj.Description
+    Write-Host "${indentstr}Accounts:"
+    $curSystemObj.Accounts  | Get-Member -MemberType NoteProperty | ForEach-Object {
+        Write-Account $curSystemObj.Accounts $_.Name ($indent + 2) 
+    }
+}
+
+function Write-Account {
+    param([PSCustomObject]$object, [string]$curAccount, [int]$indent)
+    $indentStr = " " * $indent
+    $curAccountObj = $object.$curAccount
+    Write-Host "${indentstr}Account:" $curAccount
+    Write-Host "${indentstr}  OrgUnit:" $curAccountObj.OrgUnit 
+    Write-Host "${indentstr}  Email:" $curAccountObj.Email 
+    Write-Host "${indentstr}  IAMUser:" $curAccountObj.IAMUser
+    Write-Host "${indentstr}  Pipelines:"
+    $curAccountObj.Pipelines  | Get-Member -MemberType NoteProperty | ForEach-Object {
+        Write-Pipeline $curAccountObj.Pipelines $_.Name ($indent + 4)
+    }
+}
+
+function Write-Pipeline {
+    param([PSCustomObject]$object, [string]$curPipeline, [int]$indent) 
+    $indentstr = " " * $indent 
+    Write-Host "${indentstr}Pipeline:" $curPipeline 
+    $curPipelineObj = $object.$curPipeline 
+    Write-Host "${indentstr}  Template:" $curPipelineObj.TemplatePath
+    Write-Host "${indentstr}  Description:" $curPipelineObj.Description
+    Write-Host "${indentstr}  Region:" $curPipelineObj.Region
+    Write-Host "${indentstr}  Parameters defined in template:"
+    $fixedArgs = @("TemplatePath","Description", "Region")
+    $templatePath = $curPipelineObj.TemplatePath
+    if($null -ne $templatepath -And (Test-Path $templatePath)) {
+        $parameters = Get-TemplateParameters $templatePath
+        $parameters | Get-Member -MemberType NoteProperty | ForEach-Object {
+            $name = $_.Name 
+            if($fixedArgs -contains $name) {continue}
+
+            # Check if the template parameter is in the Pipeline object; it may have been added after initial assignment.
+            if(Get-SettingsPropertyExists $curPipelineObj $name) {
+                Write-Host "${indentstr}   " ($name + ":") $curPipelineObj.$name
+            } else {
+                Write-Host "${indentstr}   " ($name + ": new parameter") 
+            }
+        }
+    }
 }
