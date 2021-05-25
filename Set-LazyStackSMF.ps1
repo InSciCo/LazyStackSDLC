@@ -125,7 +125,7 @@ do {
 
         "AWS" {
             Write-Host ""
-            Write-Host $Org.OrgCode AWS "- Account Information"
+            Write-Host "Editing:" ($Org.OrgCode + ".AWS - Account Information")
             if($Org.AWS.MgmtProfile -eq "") {
                 $Org.AWS.MgmtProfile = $Org.OrgCode + "Mgmt"
             }
@@ -152,7 +152,7 @@ do {
 
         "Sources" {
             Write-Host ""
-            Write-Host $Org.OrgCode Sources GitHub
+            Write-Host "Editing:" ($Org.OrgCode + ".Sources." + "GitHub")
             Write-Host " 1) Edit Account Information"
             Write-Host "      Management Account Name:" $Org.Sources.$curSource.AcctName 
             Write-Host "      Organziation Name:" $Org.Sources.$curSource.OrgName
@@ -170,19 +170,19 @@ do {
 
         "Source" {
             Write-Host ""
-            Write-Host $Org.OrgCode Sources $curSource
-
-            $defmsg = Get-DefMessage -current $Org.Sources.$curSource.AcctName
-            $Org.Sources.$curSource.AcctName = Read-String `
+            Write-Host "Editing:" ($Org.OrgCode + "." + "Sources" + "." + $curSource)
+            $curSourceObj = $Org.Sources.$curSource
+            $defmsg = Get-DefMessage -current $curSourceObj.AcctName
+            $curSourceObj.AcctName = Read-String `
                 -prompt "${curSource} Admin Acct Name${defmsg}" `
-                -default $Org.$curSource.AcctName `
+                -default $curSourceObj.AcctName `
                 -indent 4 `
                 -required $true
 
-            $defmsg = Get-DefMessage -current $Org.Sources.$curSource.OrgName
-            $Org.Sources.$curSource.OrgName = Read-String `
+            $defmsg = Get-DefMessage -current $curSourceObj.OrgName
+            $curSourceObj.OrgName = Read-String `
                 -prompt "GitHub Organization Name${defmsg}" `
-                -default $Org.$curSource.OrgName `
+                -default $curSourceObj.OrgName `
                 -indent 4 `
                 -required $true
 
@@ -191,8 +191,9 @@ do {
 
         "Repos" {
             Write-Host ""
-            Write-Host $Org.OrgCode Sources $curSource Repos
-            $items, $menuSelections, $curItem = Write-PropertySelectionMenu $Org.Sources.$curSource.Repos -indent 4
+            Write-Host "Editing:" ($Org.OrgCode + ".Sources." + $curSource + ".Repos")
+            $curReposObj = $org.Sources.$curSource.Repos
+            $items, $menuSelections, $curItem = Write-PropertySelectionMenu $curReposObj -indent 4
             $items = [int]$items
             Write-Host ""
             $selection = Read-MenuSelection -max $items -indent 1
@@ -203,13 +204,13 @@ do {
                 -2 { # Add
                     # Add new repo reference
                     $curRepo = Read-PropertyName `
-                        -object $Org.Sources.$curSource.Repos `
+                        -object $curReposObj `
                         -prompt "Enter name for repository reference" `
                         -exists $false `
                         -indent 4
 
                     Add-SettingsProperty `
-                        -object $Org.Sources.$curSource.Repos `
+                        -object $curReposObj `
                         -property $curRepo `
                         -default ""
 
@@ -225,7 +226,7 @@ do {
                             $curRepo = $menuSelections[$delItem]
                             $ok = Read-YesNo -prompt "Are you sure you want to delete repository reference ${curRepo}" -indent 4
                             if($ok) {
-                                Remove-SettingsProperty $Org.Sources.$curSource.Repos $curRepo
+                                Remove-SettingsProperty $curReposObj $curRepo
                                 Set-LzSettings $Org $settingsFile
                             }
                         }
@@ -241,7 +242,7 @@ do {
 
         "Repo" {
             Write-Host ""
-            Write-Host $Org.OrgCode Sources $curSource Repos $curRepo
+            Write-Host "Editing:" ($Org.OrgCode + ".Sources." + $curSource + ".Repos." + $curRepo)
 
             $ok, $newRepo = New-Repository -orgName $Org.Sources.$curSource.OrgName
             if($ok) {
@@ -253,8 +254,9 @@ do {
 
         "Systems" {
             Write-Host ""
-            Write-Host $Org.OrgCode Systems 
-            $items, $menuSelections, $curItem = Write-PropertySelectionMenu $Org.Systems
+            Write-Host "Editing:" ($Org.OrgCode + ".Systems")
+            $curSystemsObj = $Org.Systems
+            $items, $menuSelections, $curItem = Write-PropertySelectionMenu $curSystemsObj
             Write-Host ""
             $selection = Read-MenuSelection -min 1 -max $items -indent 1
             switch ($selection) {
@@ -265,20 +267,20 @@ do {
 
                     Write-Host " Adding New System"
                     $curSystem = Read-PropertyName `
-                        -object $Org.Systems `
+                        -object $curSystemsObj `
                         -prompt "Enter name for System" `
                         -exists $false `
                         -indent 4
         
                     Add-SettingsProperty `
-                        -object $Org.Systems `
+                        -object $curSystemsObj `
                         -property $curSystem `
                         -default ""                
                     $curScreen = "Accounts"
                 }
                 default {
                     $curSystem = $menuSelections[$selection]
-                    Write-System $Org.Systems $curSystem
+                    Write-System $curSystemsObj $curSystem
                     if(Read-YesNo "Edit the System") { 
                         $curScreen = "System" 
                     }  else { 
@@ -290,8 +292,8 @@ do {
 
         "System" {
             Write-Host ""
-            Write-Host $Org.OrgCode Systems $curSystem
-            $curSystemObj = $Org.Systems.$curSystem 
+            Write-Host "Editing:" ($Org.OrgCode + ".Systems." + $curSystem)
+            $curSystemObj = $curSystemsObj.$curSystem 
             Read-Property $curSystemObj Description 2
             if(Read-YesNo "Edit System Accounts") {
                 $curScreen = "Accounts" 
@@ -302,9 +304,10 @@ do {
 
         "Accounts" {
             Write-Host ""
-            Write-Host $Org.OrgCode Systems $curSystem Accounts
+            Write-Host "Editing:" ($Org.OrgCode +  ".Systems." + $curSystem + ".Accounts")
             Write-Host ""
-            $items, $menuSelections, $curItem = Write-PropertySelectionMenu $curSystemObj.Accounts
+            $curAccountsObj = $curSystemObj.Accounts
+            $items, $menuSelections, $curItem = Write-PropertySelectionMenu $curAccountsObj
             Write-Host ""
             $selection = Read-MenuSelection -min 1 -max $items -indent 2 -options "ads"
             switch($selection) {
@@ -317,7 +320,7 @@ do {
                     $accountType = Read-AccountType -indent 4
 
                     $curAccount = Read-PropertyName `
-                        -object $Org.Accounts `
+                        -object $curAccountsObj `
                         -prompt "Enter name for Account" `
                         -exists $false `
                         -default ($curSystem + $accountType) `
@@ -329,7 +332,7 @@ do {
                     $email = Read-Email -indent 4
                     
                     Add-SettingsProperty `
-                        -object $Org.Accounts `
+                        -object $curAccountsObj `
                         -property $curAccount `
                         -default (New-Account $Org.OrgCode $curSystem $accountType $description $email)
 
@@ -350,7 +353,7 @@ do {
 
         "Account" {
             Write-Host ""
-            Write-Host $Org.OrgCode Systems $curSystem Accoiunts $curAccount 
+            Write-Host "Editing:" ($Org.OrgCode + ".Systems." + $curSystem + ".Accounts." + $curAccount )
             $curAccountObj = $Org.Systems.$curSystem.Accounts.$curAccount 
             Write-Account $Org.Systems.$curSystem.Accounts $curAccount -indent 4
             $edit = Read-YesNo "Edit Account"
@@ -371,9 +374,9 @@ do {
 
         "Pipelines" {
             Write-Host ""
-            Write-Host  $Org.OrgCode Systems $curSystem Accounts $curAccount Pipelines
-            $pipelinesObj = $Org.Systems.$curSystem.Accounts.$curAccount.Pipelines
-            $items, $menuSelections, $curItem = Write-PropertySelectionMenu $pipelinesObj `
+            Write-Host  "Editing:" ($Org.OrgCode + ".Systems." + $curSystem + ".Accounts." + $curAccount + ".Pipelines")
+            $curPipelinesObj = $Org.Systems.$curSystem.Accounts.$curAccount.Pipelines
+            $items, $menuSelections, $curItem = Write-PropertySelectionMenu $curPipelinesObj `
                 -indent 4
             Write-Host ""
             $selection = Read-MenuSelection -min 1 -max $items -indent 1
@@ -383,13 +386,13 @@ do {
                 }
                 -2 { # Add new template 
                     $curTemplate = Read-PropertyName `
-                    -object $pipelinesObj `
+                    -object $curPipelinesObj `
                     -prompt "Enter name for pipeline template" `
                     -exists $false `
                     -indent 4
 
                 Add-SettingsProperty `
-                    -object $pipelinesObj `
+                    -object $curPipelinesObj `
                     -property $curTemplate `
                     -default ([PSCustomObject]@{})
                     $curScreen = "Template"
@@ -404,7 +407,7 @@ do {
                             $curTemplate = $menuSelections[$delItem]
                             $ok = Read-YesNo -prompt "Are you sure you want to delete pipeline template ${curTemplate}" -indent 4
                             if($ok) {
-                                Remove-SettingsProperty $pipelinesObj $curTemplate
+                                Remove-SettingsProperty $curPipelinesObj $curTemplate
                                 Set-LzSettings $Org $settingsFile
                             }
                         }
@@ -417,12 +420,12 @@ do {
                     Write-Host ""
                     if($curTemplate -ne "") {
                         Write-Host $curTemplate "Template"
-                        $templatePath = $pipelinesObj.$curTemplate.TemplatePath
-                        $found = (Test-Path $template)
+                        $templatePath = $curPipelinesObj.$curTemplate.TemplatePath
+                        $found = ($null -ne $templatePath -And (Test-Path $templatePath))
                         Write-Host "    TemplatePath:" $templatePath 
                         if(!$found) {Write-Host "      (Warning, template file not found)"}
-                        Write-Host "    Description:" $pipelinesObj.$curTemplate.Description
-                        Write-Host "    Region:" $pipelinesObj.$curTemplate.Region
+                        Write-Host "    Description:" $curPipelinesObj.$curTemplate.Description
+                        Write-Host "    Region:" $curPipelinesObj.$curTemplate.Region
                         $fixedArgs = @("TemplatePath","Description", "Region")
                         if(Test-Path $templatePath ) {
                             $parameters = Get-TemplateParameters $templatePath
@@ -431,8 +434,8 @@ do {
                                 if($fixedArgs -contains $name) {continue}
 
                                 # Check if the template parameter is in the Pipeline object; it may have been added after initial assignment.
-                                if(Get-SettingsPropertyExists $pipelinesObj.$curTemplate $name) {
-                                    Write-Host "   " ($name + ":") $pipelinesObj.$curTemplate.$name
+                                if(Get-SettingsPropertyExists $curPipelinesObj.$curTemplate $name) {
+                                    Write-Host "   " ($name + ":") $curPipelinesObj.$curTemplate.$name
                                 } else {
                                     Write-Host "   " ($name + ": new parameter") 
                                 }
@@ -450,10 +453,9 @@ do {
 
         "Pipeline" {
             Write-Host ""
-            Write-Host  $Org.OrgCode Systems $curSystem Accounts $curAccount Pipeline $curPipeline 
+            Write-Host  "Editing:" ($Org.OrgCode + ".Systems." + $curSystem + ".Accounts." + $curAccount + ".Pipeline." + $curPipeline)
 
-            $pipelinesObj = $Org.Systems.$curSystem.Accounts.$curAccount.Pipelines
-            $curPipelineObj = $pipelinesObj.$curPipeline
+            $curPipelineObj = $curPipelinesObj.$curPipeline
 
             #TemplatePath = "../LazyStackSMF/Test_CodeBuild_PR_Create.yaml"
             $default = $curPipelineObj.templatePath
