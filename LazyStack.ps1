@@ -11,59 +11,82 @@ if((Get-LibVersion) -ne "v1.0.0") {
 Write-Host " LazyStackSMF V1.0.0"
 Write-Host " Use this script to setup and manage your LazyStackSMF Organization"
 
-# Settings.yaml file structure
-<# Example
-
-#>
-
 
 function New-DocSpec {
-    # This object defines the structure of the settings.yaml file and what type of 
-    # entries are allowed for each property. Any PSCustomObject with a PropertySpec 
-    # allows zero or more Properties satisfying that PropertySpec to be added to the 
-    # PSCustomObject.
-    # Named Properties have an @() Rvalue like @("","Read-Email") The first entry is
-    # the name of the function to call to initialize the property the first time while 
-    # the second value is the name of the function to call when asking the user for 
-    # imput. 
-    return [PSCustomObject]@{
-        OrgCode = @("Set-String","Read-OrgCode")
-        AWS = [PSCustomObject]@{
-            MgmtProfile = @("Set-String","Read-String")
-            DefaultRegion = @("Set-String","Read-String")
-            OrgUnits = [PSCustomObject]@{
-                PropertySpec = @("Set-OrgUnit","Read-OrgUnit")
-            }
-        }
-        Sources = [PSCustomObject]@{
-            PropertySpec = [PSCustomObject]@{ 
-                OrgName = @("Set-String","Read-String")
-                Type = @("Set-SourceType","Read-SourceType")
-                AcctName = @("Set-String","Read-SourceAcctName")
-                Repos = [PSCustomObject]@{
-                    Repo = [PSCustomOBject]@{
-                        PropertySpec = @("Set-String","Read-SourceRepo")
+    return [ordered]@{
+        Type="Object"
+        Properties =[ordered]@{
+            OrgCode = @{Type="String"}
+            AWS =@{
+                Type="Object"
+                Properties=[ordered]@{
+                    MgmtProfile = @{Type="String"}
+                    DefaultRegion = @{Type="String"}
+                    OrgUnits = @{
+                        Type="HashTable"
+                        ItemTypeName="OrgUnit"
+                        Key="String"
+                        Value="String"
+                        Read="Read-OrgUnit"
                     }
                 }
             }
-        }
-        Systems = [PSCustomObject]@{
-            PropertySpec = [PSCustomObject]@{ 
-                Description = @("Set-String","Read-String")
-                Accounts = [PSCustomObject]@{
-                    PropertySpec = [PSCustomObject]@{
-                        Description = @("Set-String","Read-String")
-                        IAMUser = @("Set-String","Read-String")
-                        Email = @("Set-String","Read-Email")
-                        OrgUnit = @("Set-String","Read-OrgUnitRef")
-                        Type = @("Set-String","Read-AccountType")
-                        Pipelines = [PSCustomObject]@{
-                            PropertySpec = [PSCustomObject]@{
-                                Description = @("Set-String","Read-String")
-                                TemplatePath = @("Set-String","Read-FilePath")
-                                Region = @("Set-FromDefaultAwsRegion","Read-AwsRegionName")
-                                TemplateParams = [PSCustomObject]@{
-                                    PropertySpec = @("Get-TemplateParam","Read-TemplateParam")
+            Sources = @{
+                Type="HashTable"
+                Key="String"
+                Value=@{
+                    Type="Object"
+                    Properties=[ordered]@{
+                        OrgName = @{Type="String"}
+                        Type = @{Type="String"}
+                        AcctName = @{Type="String";Read="Read-SourceAcctName"}
+                        Repos = @{
+                            Type="HashTable";
+                            ItemTypeName="Repository"
+                            Key="String"
+                            Value="String"
+                            Read="Read-SourceRepo"}
+                    }
+                }
+            }
+            Systems = @{
+                Type="HashTable"
+                Key="String"
+                Value=@{
+                    Type="Object"
+                    Properties=[ordered]@{
+                        Description = @{Type="String"}
+                        Accounts= @{
+                            Type="HashTable"
+                            Key="String"
+                            Value=@{
+                                Type="Object" 
+                                Properties = [ordered]@{
+                                    Description = @{Type="String"}
+                                    IAMUser = @{Type="String"}
+                                    Email = @{Type="String";Read="Read-Email"}
+                                    OrgUnit = @{Type="String";Read="Read-OrgUnitRef"}
+                                    Type = @{Type="String";Read="Read-AccountType"}
+                                    Pipelines = @{
+                                        Type="HashTable"
+                                        ItemTypeName = "Pipeline"
+                                        Key = "String"
+                                        Value = @{
+                                            Type="Object"
+                                            Properties = [ordered]@{
+                                                Description = @{Tupe="String"}
+                                                TemplatePath = @{Type="String";Read="Read-FilePath"}
+                                                Region = @{Type="String";Set="Set-FromDefaultAwsRegion";Read="Read-AwsRegionName"}
+                                                TemplateParams = [PSCustomObject]@{
+                                                    Type="HashTable"
+                                                    ItemTypeName="Template Parameter"
+                                                    Key="String"
+                                                    Value="String"
+                                                    Set="Get-TemplateParameter"
+                                                }
+                                            }
+                                        }
+                                    }
                                 }
                             }
                         }
@@ -75,56 +98,257 @@ function New-DocSpec {
 }
 
 function Set-String {
-    return ""
+    return "Yada"
 }
 
 function Add-Property {
     param([PSObject]$object, [string]$property, $val)
-    $object = $object | Add-Member -NotePropertyName $property -NotePropertyValue $default
+    if($null -ne $val) {
+        $valType = $val.GetType().Name
+    } else {
+        $valType = "null"
+    }
+
+    #Write-Host "Add-Property" $property "type" $valType
+    $object = $object | Add-Member -NotePropertyName $property -NotePropertyValue $val
 }
-function Read-Tree {
-    param([PSObject]$docObj, [PSObject]$specNode)
-    $specNode | Get-Member -MemberType NoteProperty | ForEach-Object {
-        $nodeName = $_.Name
-        $nodeVal = $docSpec.$nodeName
-        $nodeType = $nodeVal.GetType().Name
-        
-        # We have three possible TreeNode types: LeafProperty, DynamicObject, FixedObject
-        if($nodeType -eq "Object[]") {
-            $nodeSpec = "LeafProperty"
-        } elseif ($nodeType -eq "PSCustomOBject") {
-            if($nodeVal.PSObject.Members.Match('PropertySpec','NoteProperty').Count -ne 0) {
-                $nodeSpec = "DynamicObject"
+
+function ConvertTo-Object($hashtable) 
+{
+   $object = New-Object PSObject
+   $hashtable.GetEnumerator() | 
+      ForEach-Object { Add-Member -inputObject $object `
+	  	-memberType NoteProperty -name $_.Name -value $_.Value }
+   $object
+}
+
+#$DocSpec = New-DocSpec
+#$Doc = [PSCustomObject]@{ OrgCode="T4"} #settings file
+#Read-Tree $Doc $DocSpec "T4"
+function Set-Tree {
+    #recursively add elements to docObject based on specNode
+    param(
+        [PSObject]$docNode, #Settings document
+        [HashTable]$specNode, #Specifications document node
+        [string]$propertyName="root",
+        [int]$indent=-4,
+        $bc=@() #breadcrumb
+    )
+    $indent += 4
+    $indentstr = " " * $indent
+    $bc += $propertyName 
+    #Iterate through specification nodes in specifications document, create 
+    #document properties
+    #Write-Host ""
+    #Write-Host $indentstr "Set-Tree"
+    #Write-Host $indentstr "propertyName=" $propertyName
+    #Write-Host $indentstr ($bc -join '.')
+    foreach($n in $specNode) {
+        #Write-Host $indentstr "Type=" $n.Type 
+        #Write-Host $indentstr "Properties.Count=" $n.Properties.Count
+    }
+
+    #Make sure the document object has the specified property
+    switch($specNode.Type) {
+        "String" { 
+            #Write-Host $indentstr "Processing Type String"
+            if($null -ne $specNode.Set -And $specNode.Set -ne "") {
+                $val = Invoke-Expression $specNode.Set
             } else {
-                $nodeSpec = "FixedObject"
+                #Write-Host $indentstr "Assigning empty string value"
+                $val = ""
+            }
+            Add-Property $docNode $propertyName $val
+        }
+        "HashTable" { 
+            #Write-Host $indentstr "Processing Type HashTable"
+            $val = @{}
+            Add-Property $docNode $propertyName $val
+            
+        }
+        "Object" {
+            #Write-Host $indentstr "Processing Type Object"
+            $properties = $specNode.Properties
+            if($null -eq $properties) {
+                Write-Host $indentstr "Error: SpecNode Poroperties missing for Type Object"
+                exit
+            }
+            if($null -eq $docNode) {
+                $docNode = [PSCustomObject]@{}
+            }
+            if($docNode.PSObject.Members.Match($propertyName, 'NoteProperty').Count -eq 0 )
+            {
+                $val = [PSCustomObject]@{}
+                Add-Property $docNode $propertyName $val
+            }
+            # Properties contains an ordered list of <propertyName, propertySpec> pairs
+            # [ordered]@{} doesn't allow you to reference Name, Value directly ;) 
+            # or Key, Value. At least this is true in PS 5.1 which we are supporting.
+            # So we work around that with a two step reference. 
+            foreach($newPropertyName in $properties.Keys) {
+                #Write-Host $indentstr "propertyName" $newPropertyName
+                $propertySpec = $properties[$newPropertyName]
+                $found = $docNode.PSObject.Members.Match($newPropertyName, 'NoteProperty').Count -gt 0 
+                if(!$found) {
+                    Set-Tree $docNode.$propertyName $propertySpec $newPropertyName $indent $bc
+                }
             }
         }
-        
-        #Write-Host "NodeName=" $nodeName "NodeVal=" $nodeVal "NodeType=" $nodeType "NodeSpec=" $nodeSpec
-   
-        #Make sure the Settings tree has the specified properties 
-        $found = $docObj.PSObject.Members.Match($nodeName, 'NoteProperty').Count -gt 0 
-        if(!$found) {
-            switch($nodeSpec) {
-                "LeafProperty" {
-                    $val = Invoke-Expression $nodeVal[0] # call initalizer ex: Set-String
+    }
+}
+function Get-Spec {
+    param($rootSpec, [string]$path)
+
+}
+
+function Read-Tree {
+    param(
+        [PSObject]$docNode, #Settings document root node
+        [PSObject]$specNode, #Specifications document root node
+        [PSObject]$breadCrumb #current breadcrumb
+        )
+    if($null -eq $docNode) {
+        Write-Host "Error: Read-Tree called with null docNode"
+        exit
+    }
+
+    if($null -eq $breadCrumb) {
+        $breadCrumb = @("doc")
+    } 
+    if($breadCrumb.GetType().Name -ne "Object[]") {
+        $breadCrumb = @($breadCrumb)
+    }
+
+    #recursively add elements to docNodeect based on specNode
+    # propNames is list of property names in order specified by specification
+    # propList is a hashtable keyed by property name with a value of #{Type, Spec}
+    Set-Tree $docNode $specNode 
+
+    $propList = [ordered]@{}
+    foreach($k in $specNode.Properties.Keys) { 
+        $propList.Add($k, $specNode.Properties[$k])
+    }
+    $propNames = @($propList.Keys)
+
+    # navigate in current doc properties 
+    # navigate the yaml file using keystrokes
+    # VirtualKeyCode
+    # 38 up arrow move to previous property 
+    # 40 down arrow move to next property - moves up in tree when it hits the last property in current object
+    # 13 enter - edit value if primative type, drill down into object
+    # 8 backspace - moves up in tree 
+
+    $propNamesPos = 0
+    $lastPos = -1
+    $done = $false
+    $virtualKeyCode = 0    
+    do {
+
+        #Construct the prompt in three pieces
+        # Breadcrumb - this is the . separated list of nodes visited. Ex: T4.AWS.MgmtProfile 
+        $curObjName = $propNames[$propNamesPos]
+        $curObjSpec = $propList[$curObjName]
+        $curObjType = $curObjSpec.Type
+        $curObj = $docNode.$curObjName
+        $prompt = ""
+        foreach($crumb in $breadCrumb) {$prompt += "${crumb}."}
+        $prompt += $curObjName
+
+        switch($curObjType) {
+            "String" {
+                # Show the current value 
+                $prompt += (" = " + $curObj + " ")
+                Write-Host $prompt -NoNewline
+            }
+            "HashTable" {
+                $count = 0
+                if($null -ne $curObj) {
+                        #Write-Host "type " $curObj.GetType().Name
+                    $count = $curObj.PSObject.Members.Match("*",'NoteProperty').Count
                 }
-                "DynamicObject" {
-                    $val = [PSCustomObject]@{}
+                if($count -gt 0) {
+                    Write-Host ""
+                    Write-Host $prompt -NoNewLine
+                    $curObj | Get-Member -MemberType NoteProperty | ForEach-Object {
+                        Write-Host "   " $_.Name 
+                    }
+                    Write-Host $prompt -NoNewline    
+                } else {
+                    Write-Host $prompt " (no ${curObjName}, press Enter to add one)" -NoNewLine
                 }
-                "FixedObject" {
-                    $val = [PSCustomObject]@{}
+
+            }
+            "Object" {
+                Write-Host ""
+                Write-Host $prompt
+                if($null -ne $curObj `
+                    -And $curObj.GetType().Name -eq "PSCustomObject" `
+                    -And $curObj.PSObject.Members.Match("*",'NoteProperty').Count -gt 0) {
+                    foreach($k in $curObjSpec.Properties.Keys) {
+                        Write-Host "    -" $k
+                    }
+
+                } 
+                Write-Host " Press Enter to edit" -NoNewline
+            }
+        }
+
+        $lastPos = $propNamesPos
+        #Write-Host "lastPos" $lastPos "propNamesPos" $propNamesPos
+        $ok = $false
+        do {
+    
+            $virtualKeyCode = ($Host.UI.RawUI.ReadKey()).VirtualKeyCode
+
+            #Write-Host "virtualKeyCode" $virtualKeyCode
+            switch($virtualKeyCode) {
+                38 { #up arrow - PREVIOUS PROPERTY
+                    if($propNamesPos -gt 0) {
+                        $propNamesPos -= 1
+                    }
+                }
+                40 { #down arrow - NEXT PROPERTY
+                    if($propNamesPos -lt ($propNames.length - 1)) {
+                        $propNamesPos += 1
+                    }
+                }
+                13 { #enter - EDIT PROPERTY 
+                    Write-Host ""
+                    switch($curObjSpec.Type ) {
+                        "String" {
+                            $read = $curObjSpec.Read
+                            if($null -eq $read) {
+                                $val = Read-Host "Enter a string value"
+                                $docNode.$curObjName = $val
+                            }
+                            $ok = $true
+                        }
+                        "Object" {
+                            Read-Tree $curObj $curObjSpec $breadCrumb
+                            $ok = $true
+                        }
+                        "HashTable" {
+                            Read-Tree $curObj $curObjSpec $breadCrumb
+                            $ok = $true
+                        }
+                    }
+
+                }
+                8 { #backspace - MOVE UP IN TREE
+                    Write-Host ""
+                    return
+                }
+                76 { #l - list items
+                    $docNode | ConvertTo-Yaml
                 }
             }
-            #The following does not work. You need to call this in a function! 
-            #$docObj = $docObj | Add-Member -MemberType NoteProperty -Name $nodeName -Value $val
-            Add-Property $docObj $nodeName $val
-        } 
 
-    }
-    #$docObj = $docObj | Add-Member -NotePropertyName Yada -NotePropertyValue "yada"
-    Write-Host "docObj=" $docObj
-    $docObj | ConvertTo-Yaml
+        } until ($lastPos -ne $propNamesPos -Or $ok)
+
+        Write-Host ""
+
+    } until ($done)
+
 
 }
 
@@ -206,7 +430,8 @@ do {
         }
 
 
-        "Nav"  { #navigate the yaml file using keystrokes
+        "Nav"  { 
+            #navigate the yaml file using keystrokes
             # up arrow move to previous property
             # down arrow move to next property - moves up in tree when it hits the last property in current object
             # enter - edit value if primative type, drill down into object
@@ -214,8 +439,11 @@ do {
 
             #Write-Host $treePath[$treeLevel].PSObject.Members("*", 'NoteProperty').Count
             $DocSpec = New-DocSpec
-            $Doc = [PSCustomObject]@{ OrgCode="T4"}
-            Read-Tree $Doc $DocSpec
+            $Doc = [PSCustomObject]@{}
+            Set-Tree $Doc $DocSpec 
+            #$Doc | ConvertTo-Yaml
+            
+            Read-Tree $Doc.root $DocSpec "root"
 
             exit
 
