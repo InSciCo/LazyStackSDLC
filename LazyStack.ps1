@@ -2,11 +2,8 @@
 # We import lib in script directory with -Force each time to ensure lib version matches script version
 # Performance is not an issue with these infrequently executed scripts
 Import-Module (Join-Path -Path (Split-Path $script:MyInvocation.MyCommand.Path) -ChildPath LazyStackLib) -Force
+Import-Module (Join-Path -Path (Split-Path $script:MyInvocation.MyCommand.Path) -ChildPath LazyStackUI) -Force
 
-if((Get-LibVersion) -ne "v1.0.0") {
-    Write-Host "Error: Imported LazyStackSMF lib has wrong version!"
-    exit
-}
 
 Write-Host " LazyStackSMF V1.0.0"
 Write-Host " Use this script to setup and manage your LazyStackSMF Organization"
@@ -19,6 +16,7 @@ function New-DocSpec {
             OrgCode = @{Type="String"}
             AWS =@{
                 Type="Object"
+                ItemType="AWS"
                 Properties=[ordered]@{
                     MgmtProfile = @{Type="String"}
                     DefaultRegion = @{Type="String"}
@@ -36,6 +34,7 @@ function New-DocSpec {
                 Key="String"
                 Value=@{
                     Type="Object"
+                    ItemType="Source"
                     Properties=[ordered]@{
                         OrgName = @{Type="String"}
                         Type = @{Type="String"}
@@ -54,10 +53,12 @@ function New-DocSpec {
                 Key="String"
                 Value=@{
                     Type="Object"
+                    ItemType="System"
                     Properties=[ordered]@{
                         Description = @{Type="String"}
                         Accounts= @{
                             Type="HashTable"
+                            ItemType="Account"
                             Key="String"
                             Value=@{
                                 Type="Object" 
@@ -250,7 +251,7 @@ function Read-Tree {
         $curObjSpec = $propList[$curObjName]
         $curObjType = $curObjSpec.Type
         $curObj = $docNode.$curObjName
-        $prompt = ""
+        $prompt = " "
         foreach($crumb in $breadCrumb) {$prompt += "${crumb}."}
         $prompt += $curObjName
 
@@ -261,12 +262,7 @@ function Read-Tree {
                 Write-Host $prompt -NoNewline
             }
             "HashTable" {
-                $count = 0
-                if($null -ne $curObj) {
-                        #Write-Host "type " $curObj.GetType().Name
-                    $count = $curObj.PSObject.Members.Match("*",'NoteProperty').Count
-                }
-                if($count -gt 0) {
+                if($null -ne $curObj -And $curObj.PSObject.Members.Match("*",'NoteProperty').Count -gt 0) {
                     Write-Host ""
                     Write-Host $prompt -NoNewLine
                     $curObj | Get-Member -MemberType NoteProperty | ForEach-Object {
@@ -289,7 +285,7 @@ function Read-Tree {
                     }
 
                 } 
-                Write-Host " Press Enter to edit" -NoNewline
+                Write-Host " Press Enter to edit " -NoNewline
             }
         }
 
@@ -328,6 +324,7 @@ function Read-Tree {
                             $ok = $true
                         }
                         "HashTable" {
+                            
                             Read-Tree $curObj $curObjSpec $breadCrumb
                             $ok = $true
                         }
@@ -349,7 +346,6 @@ function Read-Tree {
 
     } until ($done)
 
-
 }
 
 
@@ -359,7 +355,7 @@ function Read-Tree {
 
 #default values
 $settingsFile = "Settings.yaml"
-$curScreen = "Nav"
+$curScreen = "Loading"
 $curSource = "GitHub" #only supporting GitHub for now - data structure supports adding additional sources
 $quit = $false
 
@@ -439,11 +435,11 @@ do {
 
             #Write-Host $treePath[$treeLevel].PSObject.Members("*", 'NoteProperty').Count
             $DocSpec = New-DocSpec
-            $Doc = [PSCustomObject]@{}
+            $Doc = $Org
             Set-Tree $Doc $DocSpec 
-            #$Doc | ConvertTo-Yaml
+            $Doc | ConvertTo-Yaml
             
-            Read-Tree $Doc.root $DocSpec "root"
+            Read-Tree $Doc.root $DocSpec "T4"
 
             exit
 

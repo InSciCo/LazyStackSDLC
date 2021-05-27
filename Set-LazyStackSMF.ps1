@@ -2,11 +2,8 @@
 # We import lib in script directory with -Force each time to ensure lib version matches script version
 # Performance is not an issue with these infrequently executed scripts
 Import-Module (Join-Path -Path (Split-Path $script:MyInvocation.MyCommand.Path) -ChildPath LazyStackLib) -Force
+Import-Module (Join-Path -Path (Split-Path $script:MyInvocation.MyCommand.Path) -ChildPath LazyStackUI) -Force
 
-if((Get-LibVersion) -ne "v1.0.0") {
-    Write-Host "Error: Imported LazyStackSMF lib has wrong version!"
-    exit
-}
 
 Write-Host " LazyStackSMF V1.0.0"
 Write-Host " Use this script to setup and manage your LazyStackSMF Organization"
@@ -226,7 +223,7 @@ do {
                             $curRepo = $menuSelections[$delItem]
                             $ok = Read-YesNo -prompt "Are you sure you want to delete repository reference ${curRepo}" -indent 4
                             if($ok) {
-                                Remove-SettingsProperty $curReposObj $curRepo
+                                Remove-Property $curReposObj $curRepo
                                 Set-LzSettings $Org $settingsFile
                             }
                         }
@@ -407,7 +404,7 @@ do {
                             $curTemplate = $menuSelections[$delItem]
                             $ok = Read-YesNo -prompt "Are you sure you want to delete pipeline template ${curTemplate}" -indent 4
                             if($ok) {
-                                Remove-SettingsProperty $curPipelinesObj $curTemplate
+                                Remove-Property $curPipelinesObj $curTemplate
                                 Set-LzSettings $Org $settingsFile
                             }
                         }
@@ -434,7 +431,7 @@ do {
                                 if($fixedArgs -contains $name) {continue}
 
                                 # Check if the template parameter is in the Pipeline object; it may have been added after initial assignment.
-                                if(Get-SettingsPropertyExists $curPipelinesObj.$curTemplate $name) {
+                                if(Get-PropertyExists $curPipelinesObj.$curTemplate $name) {
                                     Write-Host "   " ($name + ":") $curPipelinesObj.$curTemplate.$name
                                 } else {
                                     Write-Host "   " ($name + ": new parameter") 
@@ -499,7 +496,7 @@ do {
                     # Default
                     
                     # Check if the template parameter is in the Pipeline object
-                    if(Get-SettingsPropertyExists $curPipelineObj $name) {
+                    if(Get-PropertyExists $curPipelineObj $name) {
                         Write-Host "Pipeline value for" $name "parameter"
                         $default = $curPipelineObj.$name
                         $defmsg = Get-DefMessage -default $default
