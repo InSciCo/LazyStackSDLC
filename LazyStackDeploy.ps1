@@ -3,6 +3,12 @@
 # Performance is not an issue with these infrequently executed scripts
 Import-Module (Join-Path -Path (Split-Path $script:MyInvocation.MyCommand.Path) -ChildPath LazyStackLib) -Force
 Import-Module (Join-Path -Path (Split-Path $script:MyInvocation.MyCommand.Path) -ChildPath LazyStackUI) -Force
+runas -admin
+
+#todo
+#Start-Process PowerShell -Verb RunAs
+#Install-Module powershell-yaml
+Import-Module powershell-yaml
 
 <#
 
@@ -30,12 +36,12 @@ Write-Host " Checking AWS Configuration"
 $awsOrgRootId = Get-AwsOrgRootId -mgmtAcctProfile $LzMgmtProfile
 
 if($awsOrgRootId -eq "") {
-    Write-Host " - No AWS Organziation Found for the" $LzMgmtProfile "account."
-    Write-Host " - We need to create one to continue installation."
+    Write-Host (Get-Indent 1)"- No AWS Organziation Found for the" $LzMgmtProfile "account."
+    Write-Host (Get-Indent 1)"- We need to create one to continue installation."
     $create = Read-YesNo -prompt "Create AWS Organization?" -indent 3
 
     if(!$create) {
-        Write-Host "   - OK. We won't create an AWS Organization now. Rerun this script when you are ready to create an AWS organization."
+        Write-Host (Get-Indent 3)"- OK. We won't create an AWS Organization now. Rerun this script when you are ready to create an AWS organization."
         exit
     }
 
@@ -44,15 +50,15 @@ if($awsOrgRootId -eq "") {
     $awsOrgRootId = Get-awsOrgRootId -mgmtAcctProfile $LzMgmtProfile
 
     if($awsOrgRootId -eq "") {
-        Write-Host " Error: Could not create AWS Organization. Check permissions of the" $LzMgmtProfile "account and try again."
+        Write-Host (Get-Indent 1)"Error: Could not create AWS Organization. Check permissions of the" $LzMgmtProfile "account and try again."
         exit
     }
-    Write-Host " - AWS Organization Created for the"$LzMgmtProfile "account."
+    Write-Host (Get-Indent 1)"- AWS Organization Created for the"$LzMgmtProfile "account."
 } else {
-    Write-Host " - Found AWS Organziation for the" $LzMgmtProfile "account." 
+    Write-Host (Get-Indent 1)"- Found AWS Organziation for the" $LzMgmtProfile "account." 
 }
 
-Write-Host " - AWS OrgUnits"
+Write-Host (Get-Indent 1)"- AWS OrgUnits"
 #AWS Organizational Units - create ones that don't exist 
 #read existing OUs
 $ouList = aws organizations list-organizational-units-for-parent `
@@ -65,7 +71,7 @@ $ouIds = @{}
 foreach($orgUnitName in $smf.$orgCode.AWS.OrgUnits) {
     $ou = $ouList.OrganizationalUnits | Where-Object Name -eq $orgUnitName
     if($null -eq $ou) {
-        Write-Host "   - Creating OrgUnit" $orgUnitName
+        Write-Host (Get-Indent 1)"- Creating OrgUnit" $orgUnitName
         $ou = aws organizations create-organizational-unit `
         --parent-id $awsOrgRootId `
         --name $orgUnitName  `
@@ -75,26 +81,26 @@ foreach($orgUnitName in $smf.$orgCode.AWS.OrgUnits) {
         $ouIds.Add($orgUnitName,$ou.Id)
 
         if($null -eq $ou) {
-            Write-Host " Error: Could not create OU. Check permissions of the" $LzMgmtProfile "account and try again."
+            Write-Host (Get-Indent 1)"Error: Could not create OU. Check permissions of the" $LzMgmtProfile "account and try again."
             exit
         }
     } else {
-        Write-Host "    - Found AWS OrgUnit" $orgUnitName
+        Write-Host (Get-Indent 4)"- Found AWS OrgUnit" $orgUnitName
         $ouIds.Add($orgUnitName, $ou.ID)
     }
 }
 
 Write-Host " "
-Write-Host " - Systems"
+Write-Host (Get-Indent 1)"- Systems"
 
 #Get list of accounts in organziation
 $LzAccounts = aws organizations list-accounts --profile $LzMgmtProfile | ConvertFrom-Json
 
 foreach($sysCode in $smf.$orgCode.Systems.Keys) {
-    Write-Host "    - System:" $sysCode ("("+ $smf.$orgCode.Systems.$sysCode.Description +")")
+    Write-Host (Get-Indent 4)"- System:" $sysCode ("("+ $smf.$orgCode.Systems.$sysCode.Description +")")
     $system = $smf.$orgCode.Systems[$sysCode]
 
-    Write-Host "         - Accounts"
+    Write-Host (Get-Indent 9)"- Accounts"
     foreach($acctName in $system.Accounts.Keys) {
         $awsAcct = $system.Accounts[$acctName]
         $acctType = $awsAcct.Type 
@@ -107,25 +113,25 @@ foreach($sysCode in $smf.$orgCode.Systems.Keys) {
             }
         }
 
-        Write-Host "            - Account:" $LzAcctName
+        Write-Host (Get-Indent 12)"- Account:" $LzAcctName
 
         #check if System Account already exists
         $LzAcct = ($LzAccounts.Accounts | Where-Object Name -EQ $LzAcctName)
         
         if($null -ne $LzAcct) {
-            Write-Host "           - Found AWS Account ${LzAcctName}"
+            Write-Host (Get-Indent 12)"- Found AWS Account ${LzAcctName}"
             $LzAcctId = $LzAcct.Id
         }
         else { #create System Account
             # Check email for new account exists
             $email = $smf.$orgCode.Systems.$sysCode.Email
             if($null -eq $email -Or $email -eq "") {
-                $email = Read-Email "Enter unique email for ${acctType} System Account" -indent 8
+                $email = Read-Email (Get-Indent 1)"Enter unique email for ${acctType} System Account" -indent 8
             }
 
             # Create Test Account  -- this is an async operation so we have to poll for success
             # Reference: https://awscli.amazonaws.com/v2/documentation/api/latest/reference/organizations/create-account.html
-            Write-Host "            - Creating System Account: ${LzAcctName}" 
+            Write-Host (Get-Indent 12)"- Creating System Account: ${LzAcctName}" 
 
             $LzAcct = aws organizations create-account --email $email --account-name $LzAcctName --profile $LzMgmtProfile | ConvertFrom-Json
             $LzAcctId = $LzAcct.CreateAccountStatus.Id
@@ -134,7 +140,7 @@ foreach($sysCode in $smf.$orgCode.Systems.Keys) {
             # Reference: https://awscli.amazonaws.com/v2/documentation/api/latest/reference/organizations/describe-create-account-status.html
             $LzAcctCreationCheck = 1
             do { 
-                Write-Host "            -  Checking for successful account creation. TryCount=${LzAcctCreationCheck}"
+                Write-Host (Get-Indent 12)"-  Checking for successful account creation. TryCount=${LzAcctCreationCheck}"
                 Start-Sleep -Seconds 5
                 $LzAcctStatus = aws organizations describe-create-account-status --create-account-request-id $LzAcctId --profile $LzMgmtProfile | ConvertFrom-Json
                 $LzAcctCreationCheck = $LzAcctCreationCheck + 1
@@ -147,7 +153,7 @@ foreach($sysCode in $smf.$orgCode.Systems.Keys) {
             }
 
             $LzAcctId = $LzAcctStatus.CreateAccountStatus.AccountId
-            Write-Host "            - ${LzAcctName} account creation successful. AccountId: ${LzAcctId}"
+            Write-Host (Get-Indent 12)"- ${LzAcctName} account creation successful. AccountId: ${LzAcctId}"
 
         }
 
@@ -157,12 +163,12 @@ foreach($sysCode in $smf.$orgCode.Systems.Keys) {
         $LzOUChildren = aws organizations list-children --parent-id $LzOrgUnitID --child-type ACCOUNT --profile $LzMgmtProfile | ConvertFrom-Json 
         $LzOUChild = $LzOUChildren.Children | Where-Object Id -EQ $LzAcctId
         if($null -ne $LzOUChild) {
-            Write-Host "            - Account is in ${acctType} Organizational Unit."
+            Write-Host (Get-Indent 12)"- Account is in ${acctType} Organizational Unit."
         }
         else {
             # Move new Account to OU
             # Reference: https://awscli.amazonaws.com/v2/documentation/api/latest/reference/organizations/move-account.html
-            Write-Host "            - Moving ${LzAcctName} account to ${acctType} Organizational Unit"
+            Write-Host (Get-Indent 12)"- Moving ${LzAcctName} account to ${acctType} Organizational Unit"
             $null = aws organizations move-account --account-id $LzAcctId --source-parent-id $awsOrgRootId --destination-parent-id $LzOrgUnitId --profile $LzMgmtProfile
         }
 
@@ -184,7 +190,7 @@ foreach($sysCode in $smf.$orgCode.Systems.Keys) {
         # Reference: https://awscli.amazonaws.com/v2/documentation/api/latest/reference/configure/set.html
         $LzAccessRoleProfile = $LzAcctName + "AccessRole"
         #note: This updates in place
-        Write-Host "            - Adding or Updating ${LzAccessRole} profile and associating it with the ${LzMgmtProfile} profile. "
+        Write-Host (Get-Indent 12)"- Adding or Updating ${LzAccessRole} profile and associating it with the ${LzMgmtProfile} profile. "
         $null = aws configure set role_arn arn:aws:iam::${LzAcctId}:role/OrganizationAccountAccessRole --profile $LzAccessRoleProfile
         $null = aws configure set source_profile $LzMgmtProfile --profile $LzAccessRoleProfile
         $null = aws configure set region $LzRegion --profile $LzAccessRoleProfile 
@@ -195,10 +201,10 @@ foreach($sysCode in $smf.$orgCode.Systems.Keys) {
         $awsgroups = aws iam list-groups --profile $LzAccessRoleProfile | ConvertFrom-Json
         $group = ($awsgroups.Groups | Where-Object GroupName -EQ "Administrators")
         if($null -eq $group) {
-            Write-Host "            - Creating Administrators group in the ${LzAcctName} account."
+            Write-Host (Get-Indent 12)"- Creating Administrators group in the ${LzAcctName} account."
             $null = aws iam create-group --group-name Administrators --profile $LzAccessRoleProfile
         } else {
-            Write-Host "            - Found Administrators group in ${LzAcctName} account."
+            Write-Host (Get-Indent 12)"- Found Administrators group in ${LzAcctName} account."
         }
 
         # Add policies to Group
@@ -206,9 +212,9 @@ foreach($sysCode in $smf.$orgCode.Systems.Keys) {
         # PowerUserAccess
         $policy = ($policies.AttachedPolicies  | Where-Object PolicyName -EQ AdministratorAccess) 
         if($null -ne $policy) {
-            Write-Host "            - Found AdministratorAccess Policy in Administrators group"
+            Write-Host (Get-Indent 12)"- Found AdministratorAccess Policy in Administrators group"
         } else {
-            Write-Host "            - Adding AdministratorAccess Policy to Administrators group"
+            Write-Host (Get-Indent 12)"- Adding AdministratorAccess Policy to Administrators group"
             $LzGroupPolicyArn = aws iam list-policies --query 'Policies[?PolicyName==`AdministratorAccess`].{ARN:Arn}' --output text --profile $LzAccessRoleProfile 
             $null = aws iam attach-group-policy --group-name Administrators --policy-arn $LzGroupPolicyArn --profile $LzAccessRoleProfile
         }
@@ -218,17 +224,17 @@ foreach($sysCode in $smf.$orgCode.Systems.Keys) {
         $users = aws iam list-users --profile $LzAccessRoleProfile | ConvertFrom-Json
         $user = ($users.Users | Where-Object UserName -EQ $LzIAMUserName)
         if($null -ne $user) {
-            Write-Host "            - Found IAM User ${LzIAMUserName} in ${LzAcctName} account."
+            Write-Host (Get-Indent 12)"- Found IAM User ${LzIAMUserName} in ${LzAcctName} account."
         } else {
             # Reference: https://awscli.amazonaws.com/v2/documentation/api/latest/reference/iam/create-user.html
-            Write-Host "            - Creating IAM User ${LzIAMUserName} in ${LzAcctName} account."
+            Write-Host (Get-Indent 12)"- Creating IAM User ${LzIAMUserName} in ${LzAcctName} account."
             $null = aws iam create-user --user-name $LzIAMUserName --profile $LzAccessRoleProfile | ConvertFrom-Json
             # Reference: https://docs.aws.amazon.com/cli/latest/userguide/cli-services-iam-new-user-group.html
             $LzPassword = "" + (Get-Random -Minimum 10000 -Maximum 99999 ) + "aA!"
             $null = aws iam create-login-profile --user-name $LzIAMUserName --password $LzPassword --password-reset-required --profile $LzAccessRoleProfile
 
             # Output Test Account Creds
-            Write-Host "            - Writing the IAM User Creds into ${LzIAMUserName}_credentials.txt"
+            Write-Host (Get-Indent 12)"- Writing the IAM User Creds into ${LzIAMUserName}_credentials.txt"
             $nl = [Environment]::NewLine
             $LzOut = "User name,Password,Access key ID,Secret access key,Console login link${nl}"
             + $LzAcctName + "," + $LzPassword + ",,," + "https://${LzAcctId}.signin.aws.amazon.com/console"
@@ -240,14 +246,14 @@ foreach($sysCode in $smf.$orgCode.Systems.Keys) {
         $usergroups = aws iam list-groups-for-user --user-name $LzIAMUserName --profile $LzAccessRoleProfile | ConvertFrom-Json
         $group = ($usergroups.Groups | Where-Object GroupName -EQ Administrators)
         if($null -ne $group) {
-            Write-Host "            - Found IAM User ${LzIAMUserName} in the ${LzAcctName} Account Admnistrators group."
+            Write-Host (Get-Indent 12)"- Found IAM User ${LzIAMUserName} in the ${LzAcctName} Account Admnistrators group."
         } else {
-            Write-Host "            - Adding IAM User ${LzIAMUserName} to the ${LzAcctName} Account Admnistrators group."
+            Write-Host (Get-Indent 12)"- Adding IAM User ${LzIAMUserName} to the ${LzAcctName} Account Admnistrators group."
             $null = aws iam add-user-to-group --user-name $LzIAMUserName --group-name Administrators --profile $LzAccessRoleProfile
         }
 
         #update GitHub Personal Access Token
-        Write-Host "            - Updating AWS CodeBuild GitHub Credentials"
+        Write-Host (Get-Indent 12)"- Updating AWS CodeBuild GitHub Credentials"
         $fileprocessed = $false
         do {
             if(Test-Path "GitCodeBuildToken.pat") {
@@ -291,7 +297,7 @@ foreach($sysCode in $smf.$orgCode.Systems.Keys) {
         $pipelines = $awsAcct.Pipelines
         foreach($pipelineName in $pipelines.Keys) {
             $pipeline = $pipelines[$pipelineName]
-            Write-Host "   - Pipeline:" $pipelineName "in Account " $acctName
+            Write-Host (Get-Indent 3)"- Pipeline:" $pipelineName "in Account " $acctName
             #Collection template parameters
             $region = $pipeline.Region 
             if($null -eq $region -Or $region -eq "") {
