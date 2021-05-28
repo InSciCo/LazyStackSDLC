@@ -38,12 +38,12 @@ Resources:
         Image: aws/codebuild/standard:5.0
       SecondarySources:
         - Type: GITHUB
-          Location: !Ref GitHubLzSmfUtilRepoParam
+          Location: !Ref UtilRepoParam
           GitCloneDepth: 1
           SourceIdentifier: LzSmfUtil
       SourceVersion: "main"
       Source:
-        Location: !Ref GitHubRepoParam
+        Location: !Ref RepoParam
         Type: GITHUB
         GitCloneDepth: 1
         BuildSpec: !Sub |

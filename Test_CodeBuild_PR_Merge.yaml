@@ -30,7 +30,7 @@ Resources:
         ComputeType: BUILD_GENERAL1_SMALL
         Image: aws/codebuild/standard:5.0
       Source:
-        Location: !Ref GitHubRepoParam
+        Location: !Ref RepoParam
         Type: GITHUB
         GitCloneDepth: 1
         BuildSpec: !Sub |
