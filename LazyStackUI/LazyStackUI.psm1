@@ -1,4 +1,42 @@
 
+#********* Add Functions *********
+function Add-Property {
+    param([PSObject]$object, [string]$property, $default=$null)
+
+    if($null -eq $object) { 
+        Write-Host "Error: null object passed to Get-SettingsPropertyExists"
+        exit
+    }
+    $type =$object.GetType().Name 
+    if($type -eq "OrderedDictionary") {$type = "HashTable"}
+    switch($type) {
+        "HashTable" {
+            if(!$object.Contains($property)) {
+                $object.Add($property,$default)
+            } else {
+                if($null -eq $object[$property]) {
+                    $object[$propoerty] = $default
+                }
+            }
+        }
+        "PSCustomObject" {
+            if($object.PSObject.Members.Match($property, 'NoteProperty').Count -eq 0 ) {
+                $object = $object | Add-Member -NotePropertyName $property -NotePropertyValue $default
+            } else {
+                if($null -ne $default) {
+                    if($null -eq $object.$property) {
+                        $object.$property = $default
+                    }
+                }
+            }
+        }
+        default {
+            Write-Host "Error: Bad type $type passed"
+            exit
+        }
+    }
+}
+
 #********** Read Functions ************
 function Read-Email {
     Param ([string]$prompt="Email",[string]$default, [int]$indent)
@@ -18,7 +56,6 @@ function Read-Email {
         }
     } until ($false)
 }
-
 function Read-FileName {
     Param ([string]$prompt, [string]$default, [int]$indent, [boolean]$required = $false)
     $indentstr = " " * $indent
@@ -55,7 +92,6 @@ function Read-Int {
    
     return $intvalue
 }
-
 function Read-MenuSelection{
     param(
         [string]$prompt="Select",
@@ -117,7 +153,6 @@ function Read-MenuSelection{
         }
     } until ($false)
 }
-
 function Read-OrgCode {
     Param ([string]$prompt, [string]$default, [int]$indent)
     $indentstr = " " * $indent
@@ -136,7 +171,6 @@ function Read-OrgCode {
         }
     } until ($false)
 }
-
 function Read-Property {
     param([object]$object, [string]$property, [int]$indent)
     if($null -eq $object) { 
@@ -170,7 +204,6 @@ function Read-Property {
 
 
 }
-
 function Read-PropertyName {
     param ([PSCustomObject]$object,[string]$prompt="Name", [string]$propertyName="", [bool]$exists=$false, [int]$indent=0)
     if($null -eq $object) { 
@@ -270,7 +303,6 @@ function Read-String {
         }
     } until ($false)
 }
-
 function Read-YesNo {
     Param ([string]$prompt, [boolean]$default=$true, [int]$indent)
     $indentstr = " " * $indent
@@ -287,6 +319,11 @@ function Read-YesNo {
             "" {return $default}
         }
     } until ($false)
+}
+function Read-Continue {
+    param([int]$indent)
+    $indentstr = " " * $indent
+    Read-Host "${indentstr}Press enter to continue"
 }
 
 #********** Get Functions ************
@@ -310,7 +347,6 @@ function Get-DefMessage {
     }
     return ""
 }
-
 function Get-MsgIf {
     param ([bool]$boolval, [string]$msg)
     if($boolval) {
@@ -322,6 +358,28 @@ function Get-MsgIfNot {
     if(!$boolval) {
         return $msg
     } else { return ""}
+}
+function Get-PropertyCount {
+    param($object, [string]$property)
+    if($null -eq $object) { 
+        Write-Host "Error: null object passed to Get-SettingsPropertyExists"
+        exit
+    }
+    $type =$object.GetType().Name 
+    if($type -eq "OrderedDictionary") {$type = "HashTable"}
+    switch($type) {
+        "HashTable" {
+            return $object.Count
+        }
+        "PSCustomObject" {
+            return ($object | Get-Member -MemberType NoteProperty).Count
+        }
+        default {
+            Write-Host "Error: Bad type $type passed"
+            exit
+        }
+    }
+    return ($object | Get-Member -MemberType NoteProperty).Count
 }
 function Get-RepoShortName {
     param([string]$repourl)
@@ -361,7 +419,6 @@ function Get-ValueOrMsg {
 }
 
 #******** Write functions ************
-
 function Write-Properties {
     param($object, [string]$prefix="- ", [int]$indent=4, [int]$item=0)
     if($null -eq $object) { 
@@ -481,7 +538,7 @@ function Write-PropertySelectionMenu {
 
     switch($type) {
         "PSCustomObject" {
-            $hasItems = (Get-SettingsPropertyCount $object) -gt 0
+            $hasItems = (Get-PropertyCount $object) -gt 0
             if($hasItems) {
                 $object | Get-Member -MemberType NoteProperty | ForEach-Object {
                     $item = $item + 1 
@@ -557,4 +614,13 @@ function Remove-Property {
             exit
         }
     }    
+}
+#*********** Set Functions ***********
+function Set-MissingMsg {
+    param ([string]$value, [string]$msg="(required - please provide)")
+    if($value -eq "") {
+        return $msg
+    } else {
+        return $value
+    }
 }

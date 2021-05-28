@@ -5,7 +5,7 @@ if((Get-LibVersion) -ne "v1.0.0") {
     exit
 }
 
-New-LzSysAccount `
+New-AwsSysAccount `
     -LzMgmtProfile T4Mgmt `
     -LzOUName T4TestOU `
     -LzAcctName T4TutTest `

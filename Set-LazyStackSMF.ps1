@@ -33,7 +33,7 @@ do {
     {
         "Loading" {
             Write-Host " - Loading" $settingsFile
-            $Org = Get-LzSettings $settingsFile # this routine may prompt user for OrgCode and MgmtProfile
+            $Org = Get-SMF $settingsFile # this routine may prompt user for OrgCode and MgmtProfile
 
             Write-Host " - Checking if AWS Organization exists"
             #AWS Organization - create if it doesn't exist
@@ -104,7 +104,7 @@ do {
             Write-Host "     Repository References:" (Get-MsgIf ((SettingsPropertyCount $Org.Sources.$curSource.Repos) -eq 0) "no Repositories defined yet")
             Write-Properties $Org.Sources.GitHub.Repos -indent 8
             Write-Host ""
-            $hasSystems = (Get-SettingsPropertyCount $Org.Systems) -gt 0
+            $hasSystems = (Get-PropertyCount $Org.Systems) -gt 0
             Write-Host " 3) Edit" ($Org.OrgCode + ".Systems:") (Get-MsgIfNot $hasSystems "(no systems defined yet)")
             Write-PropertyNames $Org.Systems -indent 4
             Write-Host ""
@@ -143,7 +143,7 @@ do {
                 -indent 4 `
                 -required $true
             
-            Set-LzSettings $Org 
+            Set-SMF $Org 
             $curScreen="MainMenu"
         }
 
@@ -206,7 +206,7 @@ do {
                         -exists $false `
                         -indent 4
 
-                    Add-SettingsProperty `
+                    Add-Property `
                         -object $curReposObj `
                         -property $curRepo `
                         -default ""
@@ -224,7 +224,7 @@ do {
                             $ok = Read-YesNo -prompt "Are you sure you want to delete repository reference ${curRepo}" -indent 4
                             if($ok) {
                                 Remove-Property $curReposObj $curRepo
-                                Set-LzSettings $Org $settingsFile
+                                Set-SMF $Org $settingsFile
                             }
                         }
                     }
@@ -269,7 +269,7 @@ do {
                         -exists $false `
                         -indent 4
         
-                    Add-SettingsProperty `
+                    Add-Property `
                         -object $curSystemsObj `
                         -property $curSystem `
                         -default ""                
@@ -328,10 +328,10 @@ do {
 
                     $email = Read-Email -indent 4
                     
-                    Add-SettingsProperty `
+                    Add-Property `
                         -object $curAccountsObj `
                         -property $curAccount `
-                        -default (New-Account $Org.OrgCode $curSystem $accountType $description $email)
+                        -default (New-SmfAccount $Org.OrgCode $curSystem $accountType $description $email)
 
                     $curScreen = "Account"  
 
@@ -388,7 +388,7 @@ do {
                     -exists $false `
                     -indent 4
 
-                Add-SettingsProperty `
+                Add-Property `
                     -object $curPipelinesObj `
                     -property $curTemplate `
                     -default ([PSCustomObject]@{})
@@ -405,7 +405,7 @@ do {
                             $ok = Read-YesNo -prompt "Are you sure you want to delete pipeline template ${curTemplate}" -indent 4
                             if($ok) {
                                 Remove-Property $curPipelinesObj $curTemplate
-                                Set-LzSettings $Org $settingsFile
+                                Set-SMF $Org $settingsFile
                             }
                         }
                     }
@@ -462,7 +462,7 @@ do {
                 -default $default `
                 -indent 4 `
                 -required $true
-            Add-SettingsProperty $curPipelineObj TemplatePath
+            Add-Property $curPipelineObj TemplatePath
             $curPipelineObj.TemplatePath = $templatePath
 
             #Description = "Create PR Stack on Pull Request Creation"
@@ -472,10 +472,10 @@ do {
                 -prompt "Description${defmsg}" `
                 -default $default `
                 -indent 4 
-            Add-SettingsProperty $curPipelineObj Description
+            Add-Property $curPipelineObj Description
             $curPipelineObj.Description = $description
 
-            Add-SettingsProperty $curPipelineObj RegionParam 
+            Add-Property $curPipelineObj RegionParam 
             $curPipelineObj.RegionParam = $regionParam
 
             #Read and prompt for Parameters found in template 
@@ -513,7 +513,7 @@ do {
                                 -prompt "${name}${defmsg}" `
                                 -default $default
                             $curPipelineObj.$name = $default
-                            Add-SettingsProperty $curPipelineObj $name $default
+                            Add-Property $curPipelineObj $name $default
                         }
                     }
                 }
@@ -531,7 +531,7 @@ do {
   
 } until($quit)
 
-Set-LzSettings $Org $settingsFile
+Set-SMF $Org $settingsFile
 
 
 

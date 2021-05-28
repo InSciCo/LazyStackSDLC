@@ -254,7 +254,7 @@ if($LzCreateRepository) {
 
 #Create System Test Account
 if($LzCreateTestAccount) {
-    New-LzSysAccount `
+    New-AwsSysAccount `
         -LzMgmtProfile $LzOrgSettings.AwsMgmtProfile `
         -LzOUName ($LzSysSettings.OrgCode + "TestOU") `
         -LzAcctName ($LzSysSettings.OrgCode + "Test") `
@@ -265,7 +265,7 @@ if($LzCreateTestAccount) {
 
 #Create System Production Account
 if($LzCreateProdAccount) {
-    New-LzSysAccount `
+    New-AwsSysAccount `
         -LzMgmtProfile $LzOrgSettings.AwsMgmtProfile `
         -LzOUName ($LzSysSettings.OrgCode + "ProdOU") `
         -LzAcctName ($LzSysSettings.OrgCode + "Prod") `
@@ -284,7 +284,7 @@ if($LzConfigureTestCICD) {
         + " GitHubRepoParam="  + (GitHubRepoURL -reponame $LzSysSettings.TargetRepo) `
         + " GitHubLzSmfUtilRepoParam=" + $OrgSettings.LazyStackSmfUtilRepo 
 
-    Publish-LzCodeBuildProject `
+    Publish-Pipeline `
         -LzCodeBuildStackName  $codeBuildProjectStack `
         -LzCodeBuildTemplate $LzSysSettings.TestPrCreateTemplate `
         -LzTemplateParameters $templateParameters `
@@ -295,7 +295,7 @@ if($LzConfigureTestCICD) {
     $codeBuildProjectStack = $LzSysSettings.RepoShortName + "-t-p-m"
     Write-Host "Deploying ${codeBuildProjectStack} AWS CodeBuild project to system account."
 
-    Publish-LzCodeBuildProject `
+    Publish-Pipeline `
         -LzCodeBuildStackName $codeBuildProjectStack `
         -LzCodeBuildTemplate $LzSysSettings.TestPrMergeTemplate `
         -LzTemplateParameters $templateParameters `
@@ -315,7 +315,7 @@ if($LzConfigureProdCICD) {
         + " ProdStackName=" + $LzSysSettings.ProdStackName `
         + " GitHubLzSmfUtilRepoParam= " + $OrgSettings.LazyStackSmfUtilRepo 
 
-    Publish-LzCodeBuildProject `
+    Publish-Pipeline `
         -LzCodeBuildStackName $codeBuildProjectStack `
         -LzCodeBuildTemplate $LzSysSettings.ProdPrMergeTemplate `
         -LzTemplateParameters $templateParameters `

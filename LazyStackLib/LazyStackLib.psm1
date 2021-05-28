@@ -59,44 +59,6 @@ function Read-AwsProfileName {
     $LzRootId = $LzRoots.Roots[0].Id
     return $LzRootId
  }
-function Get-SettingsPropertyCount {
-    param($object, [string]$property)
-    if($null -eq $object -Or $object.GetType().Name -ne "PSCustomObject" ) { 
-        return 0
-    }
-    return ($object | Get-Member -MemberType NoteProperty).Count
-}
-function Add-SettingsProperty {
-    param([PSObject]$object, [string]$property, $default=$null)
-
-    if($null -eq $object) { 
-        Write-Host "Error: null object passed to Add-SettingsProperty"
-        exit
-    }
-    switch($object.GetType().Name) {
-        "HashTable" {
-             Write-Host "Error: HashTable found in call to Add-SettingsProperty. Use PSCustomObject instead."
-             exit
-        }
-        "PSCustomObject" {
-            if($object.PSObject.Members.Match($property, 'NoteProperty').Count -eq 0 ) {
-                $object = $object | Add-Member -NotePropertyName $property -NotePropertyValue $default
-            } else {
-                if($null -ne $default) {
-                    if($null -ne $object.$property) {
-                        $object.$property = $default
-                    }
-                }
-            }
-        }
-        default {
-            Write-Host "Error: Invalid Object Type passed in Add-SettingsProperty: " $object.GetType()
-            exit
-        }
-    }
-}
-
-
 function Get-TemplateParameters {
     param([string]$templatePath)
     if(Test-Path $templatePath) {
@@ -108,19 +70,19 @@ function Get-TemplateParameters {
         Write-Host "Warning: ${templatePath} was not found"
     }
 }
-
-function Get-LzSettings {
-    param ([string]$filename="Settings.yaml")
+function Get-SMF {
+    param ([string]$filename="smf.yaml")
 
     if(Test-Path $filename) {
-        # Read Settings.json to create Settings object
-        # note: ConvertFrom-Yaml returns a HashTable
-        # note: ConvertFrom-Json returns a PSCustomObject
-        # We need a consistent format so covert twice to always have a PSCustomObject
-        $org = Get-Content $filename | ConvertFrom-Yaml | ConvertTo-Json -Depth 100 | ConvertFrom-Json 
+        # Read smf.yaml 
+        # ConvertFrom-Yaml returns a HashTable
+        # note: ConvertFrom-Json returns a PSCustomObject and doesn't preserve property order so we don't use it
+        # We want a consistent format that preserves property order so we use a HashTable
+        Write-Host " Loading existing SMF settings file."
+        $org = Get-Content $filename | ConvertFrom-Yaml -ordered
         return $org
     } else {
-        Write-Host "   Creating new settings file:"
+        Write-Host " Creating new SMF settings file:"
         # Create default Settings object
         $OrgCode = Read-String `
                 -prompt "Please enter OrgCode" `
@@ -128,129 +90,118 @@ function Get-LzSettings {
                 -indent 4
         }        
 
-        #AwsMgmtProfile 
-        $default = $OrgCode + "Mgmt"
-        $awsMgmtProfile = Read-AwsProfileName `
-            -prompt "Enter AWS CLI Managment Account (default: ${default})" `
-            -default $default `
-            -indent 4
+    #AwsMgmtProfile 
+    $default = $OrgCode + "Mgmt"
+    $awsMgmtProfile = Read-AwsProfileName `
+        -prompt "Enter AWS CLI Managment Account (default: ${default})" `
+        -default $default `
+        -indent 4
 
-        $org = [PSCustomObject]@{
-            OrgCode=$OrgCode
-            AWS = [PSCustomObject]@{
-               MgmtProfile=$awsMgmtProfile
-               DefaultRegion="us-east-1"
-               OrgUnits= [PSCustomObject]@{
-                   DevOU=$OrgCode+"DevOU"
-                   TestOU=$OrgCode+"TestOU"
-                   ProdOU=$OrgCode+"ProdOU"
-               }
+    $awsRegion = Read-AwsRegion $awsMgmtProfile -default "us-east-1" -indent 4
+
+    $gitHubAcctName = Read-String `
+        -prompt "    Enter your GitHub Management Acct Name"
+    
+    $gitHubOrgName = Read-String `
+        -prompt "    Enter your GitHub Organization Name"
+
+    $tutorialRepo = "https://github.com/${gitHubOrgName}/Petstore.git"
+    $defmsg = Get-DefMessage -default $tutorialRepo
+    $tutorialRepo = Read-String `
+        -prompt "Tutorial Repo${defmsg}" `
+        -default $tutorialRepo `
+        -indent 4
+
+    $utilRepo = "https://github.com/${gitHubOrgName}/LazyStackSMF.git"
+    $defmsg = Get-DefMessage -default $utilRepo
+    $utilRepo = Read-String `
+        -prompt "LazyStack Util Repo${defmsg}" `
+        -default $utilRepo `
+        -indent 4
+
+
+    $org = [ordered]@{
+        $OrgCode = [ordered]@{
+            AWS = [ordered]@{
+            MgmtProfile=$awsMgmtProfile
+            DefaultRegion=$awsRegion
+                OrgUnits= @(
+                    "DevOU"
+                    "TestOU"
+                    "ProdOU"
+                )
             }
-            Sources = [PSCustomObject]@{
-                GitHub = [PSCustomObject]@{
+            Sources = @{
+                GitHub = [ordered]@{
                     Type = "GitHub"
-                    AcctName = ""
-                    OrgName = ""
-                    Repos = [PSCustomObject]@{
-                        PetStore = ""
-                        LazyStackSMF = ""
+                    AcctName = $gitHubAcctName
+                    OrgName = $gitHubOrgName
+                }
+            }
+            Systems = [ordered]@{
+                Tut = [ordered]@{
+                    Description = "Tutorial System"
+                    Accounts = [ordered]@{
+                        Test = [ordered]@{
+                            Type="Test"
+                            Description="Test System Account"
+                            Pipelines = [ordered]@{
+                                Test_PR_Create = [ordered]@{
+                                    Description = "Create PR Stack on Pull Request Creation"
+                                    TemplatePath = "../LazyStackSMF/Test_CodeBuild_PR_Create.yaml"                               
+                                    Region = $awsRegion
+                                    TemplateParameters = [ordered]@{
+                                        RepoParam = $tutorialRepo 
+                                        UtilRepoParam = $utilRepo
+                                    }
+                                }
+                                Test_PR_Merge = [ordered]@{
+                                    Description = "Delete PR Stack on Pull Request Merge"
+                                    TemplatePath = "../LazyStackSMF/Test_CodeBuild_PR_Merge.yaml"
+                                    Region = $awsRegion
+                                    TemplateParameters = [ordered]@{
+                                        RepoParam = $tutorialRepo 
+                                    }
+                                }
+                            }
+                        }
+                        Prod = [ordered]@{
+                            Type="Prod"
+                            Description="Prod System Account"
+                            Pipelines = [ordered]@{
+                                Prod_PR_Merge = [ordered]@{
+                                    Description = "Update Production Stack on Pull Request Merge"
+                                    TemplatePath = "../LazyStackSMF/Prod_CodeBuild_PR_Merge.yaml"
+                                    Region = $awsRegion
+                                    TemplateParameters = [ordered]@{
+                                        RepoParam = $tutorialRepo 
+                                        UtilRepoParam = $utilRepo
+                                        ProdStackNameParam = $awsRegion + "-petstore"
+                                    }
+                                }
+                            }
+                        }
                     }
                 }
             }
-            Systems = [PSCustomObject]@{}
-            }
-
-        #Tutorial System
-        $tutSystem = ($OrgCode + "Tut")
-        Add-SettingsProperty `
-            -object $org.Systems `
-            -property $tutSystem `
-            -default ([PSCustomObject]@{
-                Description = "Tutorial System"
-                Accounts = [PSCustomObject]@{}
-        })
-
-        #Tutorial Test Account
-        Add-SettingsProperty `
-            -object $org.Systems.$tutSystem.Accounts `
-            -property ($OrgCode + "TutTest") `
-            -default (New-Account $OrgCode $tutSystem Test "Tutorial System Test Account" "")
-
-        #Tutorial Prod Account
-        Add-SettingsProperty `
-            -object $org.Systems.$tutSystem.Accounts `
-            -property ($OrgCode + "TutProd") `
-            -default (New-Account $OrgCode $tutSystem Prod "Tutorial System Production Account" "")
-
+        }
+    }
     return $org
 }
 
-function New-Account {
-    param([string]$orgCode, [string]$curSystem, [string]$accountType, [string]$description, [string]$email)
-
-    $account = ([PSCustomObject]@{
-        Type=$accountType
-        Description = $description
-        OrgUnit = ($orgCode + $accountType + "OU")
-        Email = $email
-        IAMUser = ($curSystem + $accountType + "IAM")
-        Pipelines = [PSCustomObject]@{}
-    })
-
-    #create default pipelines
-    $pipelinesObj = $account.Pipelines
-    switch($accountType) {
-        "Test" {
-            
-            Add-SettingsProperty $pipelinesObj Test_PR_Create ([PSCustomOBject]@{
-                Description = "Create PR Stack on Pull Request Creation"
-                TemplatePath = "../LazyStackSMF/Test_CodeBuild_PR_Create.yaml"
-                })
-            
-            Add-SettingsProperty $pipelinesObj Test_PR_Merge ([PSCustomOBject]@{
-                Description = "Delete PR Stack on Pull Request Merge"
-                TemplatePath = "../LazyStackSMF/Test_CodeBuild_PR_Merge.yaml"
-                })
-
-        }
-        "Prod" {
-            Add-SettingsProperty $pipelinesObj Prod_PR_Merge ([PSCustomOBject]@{
-                Description = "Update Production Stack on Pull Request Merge"
-                TemplatePath = "../LazyStackSMF/Prod_CodeBuild_PR_Merge.yaml"
-                })
-        }
-        "Dev" {
-
-        }
-    }
-    return $account
-}
-
-
-function Set-LzSettings {
-    param ([PSCustomObject]$settings, [string]$filename="Settings.yaml")
+function Set-SMF {
+    param ($settings, [string]$filename="smf.yaml")
     if($null -eq $settings ) {
         #fatal error, terminate calling script
         Write-Host "Error: Set-Settings settings parameter can not be null"
         exit
     }
-    # the following convert through JSON is necessary because ConvertTo-Yaml doesn't pick up 
-    # objecgt members added with Add-Member
-    Set-Content -Path $filename -Value ($settings | ConvertTo-Json -Depth 100 | ConvertFrom-Json | ConvertTo-Yaml) 
+    Set-Content -Path $filename -Value ($settings | ConvertTo-Yaml) 
 }
-function Write-LzSettings {
+function Write-SMF {
     param ([PSCustomObject]$settings)
-    Write-Host  ($settings | ConvertTo-Json -Depth 100 | ConvertFrom-Json | ConvertTo-Yaml) 
+    Write-Host  ($settings | ConvertTo-Yaml) 
 }
-function Set-MissingMsg {
-    param ([string]$value, [string]$msg="(required - please provide)")
-    if($value -eq "") {
-        return $msg
-    } else {
-        return $value
-    }
-}
-
 function Read-Repo {
     param ([string]$prompt, [string]$owner, [string]$reponame, [bool]$exists=$false, [int]$indent=0)
     $indentstr = " " * $indent
@@ -301,12 +252,10 @@ function Set-GhSession {
     # gh auth status
     return $true
 }
-
 function Get-GitHubRepoURL {
     param ([string]$reponame)
     return  "https://github.com/" + $reponame + ".git"
 }
-
 function Get-GitHubRepoExists {
     param ([string]$reponame)
     [string]$output = (gh repo view $reponame)  2>&1
@@ -314,7 +263,6 @@ function Get-GitHubRepoExists {
     # valid responses will start with "name: ", anything else is an error
     return  ($output -eq "name:")
 }
-
 function New-Repository {
     param (
         [string]$orgName
@@ -412,15 +360,162 @@ function New-Repository {
     return $true, $targetRepo   
 }
 
-function New-LzSysAccount {
+
+
+function New-AwsSysAccount {
+    param (
+        [string]$LzMgmtProfile,
+        [string]$LzRootId,
+        [string]$LzOrgUnitId, 
+        [string]$LzAcctName, 
+        [string]$LzIAMUserName,
+        [string]$LzRootEmail,
+        [string]$LzRegion,
+        [int]$indent
+    )
+    $indentstr = " " * $indent
+
+    #Check if accont already exists 
+
+
+    # Create Test Account  -- this is an async operation so we have to poll for success
+    # Reference: https://awscli.amazonaws.com/v2/documentation/api/latest/reference/organizations/create-account.html
+    Write-Host "Creating System Account: ${LzAcctName}" 
+
+    $LzAcct = aws organizations create-account --email $LzRootEmail --account-name $LzAcctName --profile $LzMgmtProfile | ConvertFrom-Json
+    $LzAcctId = $LzAcct.CreateAccountStatus.Id
+
+    # poll for success
+    # Reference: https://awscli.amazonaws.com/v2/documentation/api/latest/reference/organizations/describe-create-account-status.html
+    $LzAcctCreationCheck = 1
+    do {
+        Write-Host "    - Checking for successful account creation. TryCount=${LzAcctCreationCheck}"
+        Start-Sleep -Seconds 5
+        $LzAcctStatus = aws organizations describe-create-account-status --create-account-request-id $LzAcctId --profile $LzMgmtProfile | ConvertFrom-Json
+        $LzAcctCreationCheck = $LzAcctCreationCheck + 1
+    }
+    while ($LzAcctStatus.CreateAccountStatus.State -eq "IN_PROGRESS")
+
+    if($LzAcctStatus.CreateAccountStatus.State -ne "SUCCEEDED") {
+        Write-Host $LzAcctStatus.CreateAccountStatus.FailureReason
+        exit
+    }
+
+    $LzAcctId = $LzAcctStatus.CreateAccountStatus.AccountId
+    Write-Host "    - ${LzAcctName} account creation successful. AccountId: ${LzAcctId}"
+
+
+    # Check if account is in OU
+    $LzOUChildren = aws organizations list-children --parent-id $LzOrgUnitID --child-type ACCOUNT --profile $LzMgmtProfile | ConvertFrom-Json 
+    $LzOUChild = $LzOUChildren.Children | Where-Object Id -EQ $LzAcctId
+    if($null -ne $LzOUChild) {
+        Write-Host "${LzAcctName} already in ${LzOUName} so skipping account move."
+    }
+    else {
+        # Move new Account to OU
+        # Reference: https://awscli.amazonaws.com/v2/documentation/api/latest/reference/organizations/move-account.html
+        Write-Host "    - Moving ${LzAcctName} account to ${LzOUName} organizational unit"
+        $null = aws organizations move-account --account-id $LzAcctId --source-parent-id $LzRootId --destination-parent-id $LzOrgUnitId --profile $LzMgmtProfile
+    }
+
+    <# 
+    Reference: https://docs.aws.amazon.com/organizations/latest/userguide/orgs_manage_accounts_access.html
+    When you create an account in your organization, in addition to the root user, 
+    AWS Organizations automatically creates an IAM role that is by default named 
+    OrganizationAccountAccessRole. 
+
+    Reference: https://docs.aws.amazon.com/IAM/latest/UserGuide/id_roles_use_switch-role-cli.html
+    To use that role from the LzMgmtAdmin account we need a AWS profile with the following form:
+    [profile LzDevAcessRole]
+        role_arn = arn:aws:iam::123456789012:role/OrganizationAccountAccessRole
+        source_profile = LzMgmtAdmin
+    We use the aws configure command to set this up. 
+    #>
+
+    # Create AccessRole profile
+    # Reference: https://awscli.amazonaws.com/v2/documentation/api/latest/reference/configure/set.html
+    $LzAccessRoleProfile = $LzAcctName + "AccessRole"
+    Write-Host "Adding or Updating ${LzAccessRole} profile and associating it with the ${LzMgmtProfile} profile. "
+    $null = aws configure set role_arn arn:aws:iam::${LzAcctId}:role/OrganizationAccountAccessRole --profile $LzAccessRoleProfile
+    $null = aws configure set source_profile $LzMgmtProfile --profile $LzAccessRoleProfile
+    $null = aws configure set region $LzRegion --profile $LzAccessRoleProfile 
+
+    # Create Administrators Group for Test Account
+    # Reference: https://docs.aws.amazon.com/cli/latest/userguide/cli-services-iam-new-user-group.html
+
+    
+    $awsgroups = aws iam list-groups --profile $LzAccessRoleProfile | ConvertFrom-Json
+    $group = ($awsgroups.Groups | Where-Object GroupName -EQ "Administrators")
+    if($null -eq $group) {
+        Write-Host "Creating Administrators group in the ${LzAcctName} account."
+        $null = aws iam create-group --group-name Administrators --profile $LzAccessRoleProfile
+    } else {
+        Write-Host "Administrators group exists in the ${LzAcctName} account."
+    }
+
+    # Add policies to Group
+    $policies = aws iam list-attached-group-policies --group-name Administrators --profile $LzAccessRoleProfile
+    # PowerUserAccess
+    $policy = ($policies.AttachedPolicies  | Where-Object PolicyName -EQ AdministratorAccess) 
+    if($null -ne $policy) {
+        Write-Host "    - Policy AdministratorAccess already in Administrators group"
+    } else {
+        Write-Host "    - Adding policy AdministratorAccess"
+        $LzGroupPolicyArn = aws iam list-policies --query 'Policies[?PolicyName==`AdministratorAccess`].{ARN:Arn}' --output text --profile $LzAccessRoleProfile 
+        $null = aws iam attach-group-policy --group-name Administrators --policy-arn $LzGroupPolicyArn --profile $LzAccessRoleProfile
+    }
+
+    # Create User in Account
+    $users = aws iam list-users --profile $LzAccessRoleProfile | ConvertFrom-Json
+    $user = ($users.Users | Where-Object UserName -EQ $LzIAMUserName)
+    if($null -ne $user) {
+        Write-Host "IAM User ${LzIAMUserName} already in ${LzAcctName} account."
+    } else {
+        # Reference: https://awscli.amazonaws.com/v2/documentation/api/latest/reference/iam/create-user.html
+        Write-Host "Creating IAM User ${LzIAMUserName} in ${LzAcctName} account."
+        $null = aws iam create-user --user-name $LzIAMUserName --profile $LzAccessRoleProfile | ConvertFrom-Json
+        # Reference: https://docs.aws.amazon.com/cli/latest/userguide/cli-services-iam-new-user-group.html
+        $LzPassword = "" + (Get-Random -Minimum 10000 -Maximum 99999 ) + "aA!"
+        $null = aws iam create-login-profile --user-name $LzIAMUserName --password $LzPassword --password-reset-required --profile $LzAccessRoleProfile
+
+        # Output Test Account Creds
+        Write-Host "    - Writing the IAM User Creds into ${LzIAMUserName}_creds.txt"
+        $nl = [Environment]::NewLine
+        $LzOut = "User name,Password,Access key ID,Secret access key,Console login link${nl}"
+        + $LzAcctName + "," + $LzPassword + ",,," + "https://${LzAcctId}.signin.aws.amazon.com/console"
+
+        $LzOut > ${LzIAMUserName}_credentials.csv
+    }
+
+    # Add user to Group 
+    $usergroups = aws iam list-groups-for-user --user-name $LzIAMUserName --profile $LzAccessRoleProfile | ConvertFrom-Json
+    $group = ($usergroups.Groups | Where-Object GroupName -EQ Administrators)
+    if($null -ne $group) {
+        Write-Host "    - IAM User ${LzIAMUserName} is already in the Admnistrators group in the ${LzAcctName} account."
+    } else {
+        Write-Host "    - Adding the IAM User ${LzIAMUserName} to the Administrators group in the ${LzAcctName} account."
+        $null = aws iam add-user-to-group --user-name $LzIAMUserName --group-name Administrators --profile $LzAccessRoleProfile
+    }
+
+    #update GitHub Personal Access Token
+    $LzPat = Get-Content -Path GitCodeBuildToken.pat
+    aws codebuild import-source-credentials --server-type GITHUB --auth-type PERSONAL_ACCESS_TOKEN --profile LzAccessRoleProfile --token $LzPAT
+
+    return $true
+}
+
+function New-AwsSysAccount_old {
     param (
         [string]$LzMgmtProfile,
         [string]$LzOUName, 
-        [string]$LzAcctName,
+        [string]$LzAcctName, 
         [string]$LzIAMUserName,
         [string]$LzRootEmail,
-        [string]$LzRegion
+        [string]$LzRegion,
+        [int]$indent
     )
+    $indentstr = " " * $indent
+
     Write-Host "LzMgmtProfile=${LzMgmtProfile}"
     Write-Host "LzOUName=${LzOUName}"
     Write-Host "LzRootEmail=${LzRootEmail}"
@@ -585,7 +680,31 @@ function New-LzSysAccount {
 
     return $true
 }
-function Publish-LzCodeBuildProject {
+
+function Get-ValidAwsStackName {
+    param([string]$name)
+    $chars = $name.toCharArray()
+    $newName = New-Object char[] $chars.Length
+    $i = 0
+
+    foreach($c in $chars) {
+        if( ($c -ge 'A' -And $c -le "Z")  -Or ($c -ge 'a' -And $c -le "z")  -Or ($c -ge '0' -And $c -le '9') -Or $c -eq "-" ) {
+            $newName[$i] = $c
+        } else  {
+            $newName[$i] = '-'
+        }
+        $i += 1
+    }
+    $stackName = -Join $newName
+    if($newName[0] -eq '-') {
+        Write-Host "Error: Invalid StackName '${stackName}' Can't start with a '-' "
+        exit
+    }
+
+    return $stackName
+}
+
+function Publish-Pipeline {
     param (
         [string]$LzCodeBuildStackName,
         [string]$LzCodeBuildTemplate,
@@ -605,7 +724,6 @@ function Publish-LzCodeBuildProject {
         --profile $LzAwsProfile `
         --region $LzRegion
 }
-
 function Read-AccountType {
     param([string]$default, [int]$indent)
     $indentstr = " " * $indent
@@ -618,7 +736,6 @@ function Read-AccountType {
         2 {return "Prod"}
     }
 }
-
 function Write-System {
     param ([PSCustomObject]$object, [string]$curSystem, [int]$indent)
     $systemObj = $object.$curSystem 
@@ -628,7 +745,6 @@ function Write-System {
     Write-Host "${indentstr}  Description:" $systemObj.Description
     Write-Accounts $object.$curSystem ($indent + 2)
 }
-
 function Write-Accounts {
     param([PSCustomObject]$systemObj, [int]$indent)
     $indentstr = " " * $indent
@@ -637,8 +753,6 @@ function Write-Accounts {
         Write-Account $systemObj.Accounts $_.Name ($indent + 2) 
     }    
 }
-
-
 function Write-Account {
     param([PSCustomObject]$object, [string]$curAccount, [int]$indent)
     $indentStr = " " * $indent
@@ -649,7 +763,6 @@ function Write-Account {
     Write-Host "${indentstr}  IAMUser:" $accountObj.IAMUser
     Write-Pipelines $accountObj ($indent + 2)
 }
-
 function Write-Pipelines {
     param([PSCustomObject]$accountObj, [int]$indent )
     $indentstr = " " * $indent
@@ -658,7 +771,6 @@ function Write-Pipelines {
         Write-Pipeline $accountObj.Pipelines $_.Name ($indent + 2)
     }
 }
-
 function Write-Pipeline {
     param([PSCustomObject]$object, [string]$curPipeline, [int]$indent) 
     $indentstr = " " * $indent 
