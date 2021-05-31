@@ -275,6 +275,11 @@ foreach($sysCode in $smf.$orgCode.Systems.Keys) {
 }
 $indent -= 4
 
+$ok = Read-YesNo -prompt "Deploy Pipelines?" -indent $indent 
+if(!$ok) {
+    exit
+}
+
 Write-LzHost $indent  "PipeLine Deployments"
 $indent += 2
 

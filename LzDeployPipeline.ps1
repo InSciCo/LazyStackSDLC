@@ -89,6 +89,7 @@ switch($selection) {
     
         $LzAccessRoleProfile = $orgCode + $sysCode + $awsAcctName + "AccessRole"
         $stackName = Get-ValidAwsStackName($pipelineName + "-" + $pipeline.Region) # replace non-alphanumeric characters with "-"
+        $stackName = $stackName.ToLower()
         if($templateParams -eq "") {
             sam deploy `
             --stack-name $stackName `

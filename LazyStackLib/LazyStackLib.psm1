@@ -112,7 +112,7 @@ function Get-SMF {
         -default $tutorialRepo `
         -indent 4
 
-    $utilRepo = "https://github.com/${gitHubOrgName}/LazyStackSMF.git"
+    $utilRepo = "https://github.com/${gitHubOrgName}/LazyStackSmfUtil.git"
     $defmsg = Get-DefMessage -default $utilRepo
     $utilRepo = Read-String `
         -prompt "LazyStack Util Repo${defmsg}" `
