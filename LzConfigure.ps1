@@ -313,6 +313,7 @@ foreach($sysCode in $smf.$orgCode.Systems.Keys) {
         
             $LzAccessRoleProfile = $orgCode + $sysCode + $acctName + "AccessRole"
             $stackName = Get-ValidAwsStackName($pipelineName + "-" + $pipeline.Region) # replace non-alphanumeric characters with "-"
+            $stackName = $stackName.ToLower()
             if($templateParams -eq "") {
                 sam deploy `
                 --stack-name $stackName `
