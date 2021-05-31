@@ -54,16 +54,18 @@ switch($selection) {
         exit
     } 
     default {
-        $item = $selection - 1
-        $pipelineMenuEntry = $pipelinesMenu[$item]
+        $pipelineMenuEntry = $pipelinesMenu[$selection - 1]
         $sysCode = $pipelineMenuEntry.SysCode 
         $awsAcctName = $pipelineMenuEntry.AccountName
+        $pipelineName = $pipelineMenuEntry.PipelineName
         Write-Host "orgCode" $orgCode 
         Write-Host "sysCode" $sysCode 
         Write-Host "awsAcctName" $awsAcctName
+        Write-Host "pipeLineName" $pipelineName
         $awsAcct = $smf.$orgCode.Systems.$sysCode.Accounts.$awsAcctName
-        Write-Host "awsAcct" $awsAcct
-        $pipelineName = $piplelineMenuEntry.PipelineName
+        $pipeline = $awsAcct.Pipelines[$pipelineName]
+
+        #$pipeline | ConvertTo-Yaml 
 
         $LzRegion = $awsAcct.DefaultRegion
         if($null -eq $LzRegion -Or $LzRegion -eq "") {
@@ -72,7 +74,6 @@ switch($selection) {
                 $LzRegion = "us-east-1"
             }
         }
-        $pipeline = $smf.$orgCode.Systems.$sysCode.Accounts.$awsAcctName.Pipelines[$pipelineName]
 
         $region = $pipeline.Region 
         if($null -eq $region -Or $region -eq "") {
