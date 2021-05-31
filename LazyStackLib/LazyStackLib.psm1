@@ -188,7 +188,11 @@ function Get-SMF {
     }
     return $org
 }
-
+function Get-Indent{
+    param ([int]$indent)
+    $indentstr =  " "*$indent
+    return $indentstr
+}
 function Set-SMF {
     param ($settings, [string]$filename="smf.yaml")
     if($null -eq $settings ) {
@@ -620,7 +624,7 @@ function New-AwsSysAccount_old {
     # Create Administrators Group for Test Account
     # Reference: https://docs.aws.amazon.com/cli/latest/userguide/cli-services-iam-new-user-group.html
 
-    exit
+    exit #bug?
     $awsgroups = aws iam list-groups --profile $LzAccessRoleProfile | ConvertFrom-Json
     $group = ($awsgroups.Groups | Where-Object GroupName -EQ "Administrators")
     if($null -eq $group) {
