@@ -419,6 +419,29 @@ function Get-ValueOrMsg {
 }
 
 #******** Write functions ************
+
+function Write-LzHost {
+    param ([int]$indent=0, [Switch]$NoNewLine, $v1, $v2, $v3, $v4, $v5, $v6, $v7, $v8, $v9, $v10 )
+    $indentstr = " " * $indent
+    $items = @($v1,$v2,$v3,$v4,$v5,$v6,$v7,$v8,$v9,$v10)
+    $newStr = $indentstr
+    $first = $true
+    foreach($item in $items) {
+        if($null -ne $item -And $item -ne "") {
+            if(!$first) {
+                $newStr += (" " + $item)
+            } else {
+                $newStr += ( $item)
+                $first = $false
+            }
+        }
+    }
+    if($NoNewLine) {
+        Write-Host -NoNewLine $newStr
+    } else {
+        Write-Host $newStr
+    }
+}
 function Write-Properties {
     param($object, [string]$prefix="- ", [int]$indent=4, [int]$item=0)
     if($null -eq $object) { 

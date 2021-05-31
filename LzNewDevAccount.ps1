@@ -1,7 +1,8 @@
-Write-Host "Dev_Account_Create.ps1 - V1.0.0"
+Write-Host "LzNewDevAccount.ps1 - V1.0.0"
 Write-Host "This script adds a developer account to the Dev Organizational Unit."
 Write-Host "It also adds a Admin Access Profile so this workstation can administer the new Account."
 Write-Host "Note: Press return to accept a default value."
+
 $LzOrgCode = (Read-Host "Enter your OrgCode")
 
 $LzRegion = ""
@@ -42,7 +43,7 @@ if($LzRegionInput -ne "") {
     $LzRegion = $LzRegionInput
 }
 
-$LzOUName = "${LzOrgCode}DevOU"
+$LzOUName = "DevOU"
 $LzOUNameInput = Read-Host "Enter the Development OU Name (default ${LzOUName})"
 if($LzOUNameInput -ne "") {
     $LzOUName = $LzOUNameInput
@@ -189,11 +190,16 @@ $LzGroupPolicyArn = aws iam list-policies --query 'Policies[?PolicyName==`PowerU
 $null = aws iam attach-group-policy --group-name Developers --policy-arn $LzGroupPolicyArn --profile $LzAccessRoleProfile
 
 # IAMUserCredsPolicy
+$iamUserCredsPolicyFile = "IAMUserCredsPolicy.json"
+if(!(Test-Path $iamUserCredsPolicyFile)) {
+    $iamUserCredsPolicyFile = Path-Join ".." "LazyStacksSMF" "IAMUserCredsPolicy.json"
+}
+
 Write-Host "    - Adding policy IAMUserCredsPolicy"
 $LzGroupPolicyArn = aws iam list-policies --query 'Policies[?PolicyName==`IAMUserCredsPolicy`].{ARN:Arn}' --output text --profile $LzAccessRoleProfile
 if($null -eq $LzGroupPolicyArn)
 {
-    $LzGroupPolicy = aws iam create-policy --policy-name IAMUserCredsPolicy --policy-document file://IAMUserCredsPolicy.json --profile $LzAccessRoleProfile | ConvertFrom-Json
+    $LzGroupPolicy = aws iam create-policy --policy-name IAMUserCredsPolicy --policy-document file://$iamUserCredsPolicyFile --profile $LzAccessRoleProfile | ConvertFrom-Json
     $LzGroupPolicyArn = $LzGroupPolicy.Policy.Arn
 }
 $null = aws iam attach-group-policy --group-name Developers --policy-arn $LzGroupPolicyArn --profile $LzAccessRoleProfile
@@ -206,26 +212,20 @@ $null = aws iam create-user --user-name $LzIAMUserName --profile $LzAccessRolePr
 $LzPassword = "" + (Get-Random -Minimum 10000 -Maximum 99999 ) + "aA!"
 $null = aws iam create-login-profile --user-name $LzIAMUserName --password $LzPassword --password-reset-required --profile $LzAccessRoleProfile
 
+# Output Test Account Creds
+Write-Host "   - Writing the IAM User Creds into ${LzIAMUserName}_credentials.txt"
+$nl = [Environment]::NewLine
+$LzOut = "User name,Password,Access key ID,Secret access key,Console login link${nl}"
++ $LzAcctName + "," + $LzPassword + ",,," + "https://${LzAcctId}.signin.aws.amazon.com/console"
+$LzOut > ${LzIAMUserName}_credentials.csv
+
+
 # Add user to Group 
 Write-Host "    - Adding the IAM User ${LzIAMUserName} to the Developers group in the ${LzAcctName} account."
 $null = aws iam add-user-to-group --user-name $LzIAMUserName --group-name Developers --profile $LzAccessRoleProfile
 
-# Output Developer Account Creds
-Write-Host "    - Writing the IAM User Creds into ${LzIAMUserName}_welcome.txt"
-$nl = [Environment]::NewLine
-$LzOut = "Account Name: ${LzAcctName}${nl}"  `
-+ "Account Console: https://${LzAcctId}.signin.aws.amazon.com/console${nl}" `
-+ "IAM User: ${LzIAMUserName}${nl}" `
-+ "Temporary Password: ${LzPassword}${nl}" `
-+ "Please login, you will be required to reset your password." `
-+ "Please login as soon as possible." `
-+ "Follow the Dev profile Setup instructions at https://lazystack.io/installation/installation_awsdevprofilesteps.html"
-
-
-$LzOut > ${LzIAMUserName}_welcome.txt
-
 Write-Host "Processing Complete"
 
-Write-Host "Send the ${LzIAMUserName}_welcome.txt file to the Developer or use it yourself if you are also that developer."
+Write-Host "Send the ${LzIAMUserName}_credentials.txt file to the Developer or use it yourself if you are also that developer."
 Write-Host "The file contains the URL to login to the AWS Account ${LzAcctName} and the initial password (password reset"
 Write-Host "required on first login) for the IAM User ${LzIAMUserName}."
