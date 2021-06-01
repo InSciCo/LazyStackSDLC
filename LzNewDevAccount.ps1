@@ -3,6 +3,12 @@ Write-LzHost $indent "This script adds a developer account to the Dev Organizati
 Write-LzHost $indent "It also adds a Admin Access Profile so this workstation can administer the new Account."
 Write-LzHost $indent "Note: Press return to accept a default value."
 
+$scriptPath = Split-Path $script:MyInvocation.MyCommand.Path 
+Import-Module (Join-Path -Path $scriptPath -ChildPath LazyStackLib) -Force
+Import-Module (Join-Path -Path $scriptPath -ChildPath LazyStackUI) -Force
+
+$indent = 1
+
 $LzOrgCode = (Read-Host "Enter your OrgCode")
 
 $LzRegion = ""
@@ -191,7 +197,7 @@ We use the aws configure command to set this up.
 # Create AccessRole profile
 # Reference: https://awscli.amazonaws.com/v2/documentation/api/latest/reference/configure/set.html
 $LzAccessRoleProfile = $LzAcctName + "AccessRole"
-Write-LzHost $indent "Adding ${LzAccessRole} profile and associating it with the ${LzMgmtAcct} profile. "
+Write-LzHost $indent "Adding ${LzAccessRole} profile and associating it with the ${LzMgmtProfile} profile. "
 $null = aws configure set role_arn arn:aws:iam::${LzAcctId}:role/OrganizationAccountAccessRole --profile $LzAccessRoleProfile
 $null = aws configure set source_profile $LzMgmtProfile --profile $LzAccessRoleProfile
 $null = aws configure set region $LzRegion --profile $LzAccessRoleProfile
