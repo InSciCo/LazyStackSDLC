@@ -232,7 +232,7 @@ foreach($sysCode in $smf.$orgCode.Systems.Keys) {
             # Output Test Account Creds
             Write-LzHost $indent  "- Writing the IAM User Creds into ${LzIAMUserName}_credentials.txt"
             $nl = [Environment]::NewLine
-            $LzOut = "User name,Password,Access key ID,Secret access key,Console login link${nl}"
+            $LzOut = "User name,Password,Access key ID,Secret access key,Console login link${nl}" `
             + $LzAcctName + "," + $LzPassword + ",,," + "https://${LzAcctId}.signin.aws.amazon.com/console"
 
             $LzOut > ${LzIAMUserName}_credentials.csv
