@@ -230,7 +230,7 @@ foreach($sysCode in $smf.$orgCode.Systems.Keys) {
             $null = aws iam create-login-profile --user-name $LzIAMUserName --password $LzPassword --password-reset-required --profile $LzAccessRoleProfile
 
             # Output Test Account Creds
-            Write-LzHost $indent  "- Writing the IAM User Creds into ${LzIAMUserName}_credentials.txt"
+            Write-LzHost $indent  "- Writing the IAM User Credentialss into ${LzIAMUserName}_credentials.txt"
             $nl = [Environment]::NewLine
             $LzOut = "User name,Password,Access key ID,Secret access key,Console login link${nl}" `
             + $LzAcctName + "," + $LzPassword + ",,," + "https://${LzAcctId}.signin.aws.amazon.com/console"
