@@ -1,49 +1,46 @@
-Write-Host "LzUpdateDevCreds.ps1 - V1.0.0"
-Write-Host "This script creates/updates the IAMUserCreds customer managed policy for a developer account."
-$LzOrgCode = (Read-Host "Enter your OrgCode")
+Write-LzHost $indent "LzUpdateDevCreds.ps1 - V1.0.0"
+Write-LzHost $indent "This script creates/updates the IAMUserCreds customer managed policy for a developer account."
 
-$LzRegion = ""
-do {
-    $LzMgmtProfile = "${LzOrgcode}Mgmt"
-    $LzMgmtProfileInput = (Read-Host "Enter your AWS CLI Management Account Profile (default: ${LzOrgCode}Mgmt)")
-    
-    if($null -eq $LzMgmtProfileInput) {
-        $LzMgmtProfile = $LzMgmtProfileInput
-    }
+$scriptPath = Split-Path $script:MyInvocation.MyCommand.Path 
+Import-Module (Join-Path -Path $scriptPath -ChildPath LazyStackLib) -Force
+Import-Module (Join-Path -Path $scriptPath -ChildPath LazyStackUI) -Force
 
-   $LzMgmtProfileKey = aws configure get profile.${LzMgmtProfile}.aws_access_key_id
-    if($LzMgmtProfileKey -eq "") {
-        Write-Host "Profile ${LzMgmtProfile} not found or not configured with Access Key"
-        $LzMgmtProfileExists = $false
-    }
-    else  {
-        $LzMgmtProfileExists = $true
-        # Grab region in managment profile as default for new IAM User
-        $LzRegion = aws configure get profile.${LzMgmtProfile}.region
-    }
+$settingsFile = "smf.yaml"
+$indent = 0
 
-    # Make sure LzMgmtProfile is associated with an IAM User in an Account belonging to an Organization
-    $null = aws organizations describe-organization --profile $LzMgmtProfile
-    if($? -eq $false) {
-        Write-Host "${LzMgmtProfile} profile is associated with an IAM User not administering an Organization."
-        Exit
-    }
+if(!(Test-Path $settingsFile)) {
+    Write-LzHost $indent "Error: Can't find ${settingsFile}"
+    exit
 }
-until ($LzMgmtProfileExists)
+
+$smf = Get-SMF $settingsFile # this routine may prompt user for OrgCode and MgmtProfile
+$LzOrgCode = @($smf.Keys)[0]
+Write-LzHost $indent "OrgCode:" $LzOrgCode
+$LzMgmtProfile = $smf.$LzOrgCode.AWS.MgmtProfile
+Write-LzHost $indent "AWS Managment Account:" $LzMgmtProfile
+
+$LzMgmtProfileKey = aws configure get profile.${LzMgmtProfile}.aws_access_key_id
+if($LzMgmtProfileKey -eq "") {
+    Write-LzHost $indent "Profile ${LzMgmtProfile} not found or not configured with Access Key"
+    exit
+}
+$LzRegion = aws configure get profile.${LzMgmtProfile}.region
+
+$null = aws organizations describe-organization --profile $LzMgmtProfile
+if($? -eq $false) {
+    Write-LzHost $indent "${LzMgmtProfile} profile is associated with an IAM User not administering an Organization."
+    Exit
+}
+
 
 if ($LzRegion -eq "") {
     $LzRegion = "us-east-1"
 }
 
-$LzRegionInput = Read-Host "Enter Region (default ${LzRegion})"
-if($LzRegionInput -ne "") {
-    $LzRegion = $LzRegionInput
-}
-
 do {
     $LzDevHandle = Read-Host "Enter the Developer's Handle (ex: Joe)"
     if($LzDevHandle -eq "") {
-        Write-Host "Developer's Handle can't be empty. Please enter a value."
+        Write-LzHost $indent "Developer's Handle can't be empty. Please enter a value."
     }
 }
 until ($LzDevHandle -ne "")
@@ -54,44 +51,35 @@ if($LzAcctNameInput -ne "") {
     $LzAcctName = $LzAcctNameInput
 }
 
-$LzPolicyName="IAMUserCredsPolicy"
-
-$LzPolicyNameInput = Read-Host "Enter the name of the policy (default: ${LzPolicyName}) "
-if("" -ne $LzPolicyNameInput) {
-    $LzPolicyName = $LzPolicyNameInput
+$IamUserCredsPolicyFile = "IAMUserCredsPolicy.json"
+if(!(Test-Path $IamUserCredsPolicyFile)) {
+    $IamUserCredsPolicyFile = "../LazyStackSMF/IAMUserCredsPolicy.json"
 }
 
-$LzPolicyDocument = "IAMUserCredsPolicy.json"
-$LzPolicyDocumentInput = Read-Host "Enter the name of the policy document file (default: ${LzPolicyDocument})"
-if("" -ne $LzPolicyDocumentInput) {
-    $LzPolicyDocument = $LzPolicyDocumentInput
-}
-
-if(Path-Test $LzPolicyDocument)
-
-
-Write-Host "Please Review and confirm the following to create or update the policy:"
-Write-Host "    OrgCode: ${LzOrgCode}"
-Write-Host "    Management Account Profile: ${LzMgmtProfile}"
-Write-Host "    Development Account to be created: ${LzAcctName}"
-Write-Host "    Policy Name: ${LzPolicyName}"
-Write-Host "    Policy Document File: ${LzPolicyDocument}"
+Write-LzHost $indent "Please Review and confirm the following to create or update the policy:"
+Write-LzHost $indent "    OrgCode: ${LzOrgCode}"
+Write-LzHost $indent "    Management Account Profile: ${LzMgmtProfile}"
+Write-LzHost $indent "    Policy Document File location: ${IamUserCredsPolicyFile}"
 
 $LzContinue = (Read-Host "Continue y/n") 
 if($LzContinue -ne "y") {
-    Write-Host "Exiting"
+    Write-LzHost $indent "Exiting"
     Exit
 }
-Write-Host ""
-Write-Host "Processing Starting"
+Write-LzHost $indent ""
+Write-LzHost $indent "Processing Starting"
+
+ $LzAccessRoleProfile = $LzAcctName + "AccessRole"
 
 # IAMUserCredsPolicy
-Write-Host "    - Adding policy IAMUserCredsPolicy"
 $LzGroupPolicyArn = aws iam list-policies --query 'Policies[?PolicyName==`IAMUserCredsPolicy`].{ARN:Arn}' --output text --profile $LzAccessRoleProfile
 if($null -eq $LzGroupPolicyArn) {
-    aws iam create-policy --policy-name $LzPolicyName --policy-document file://$LzPolicyDocument --profile $LzAccessRoleProfile
+    Write-LzHost $indent "    - Adding policy IAMUserCredsPolicy"
+    $null = aws iam create-policy --policy-name $LzPolicyName --policy-document file://$IamUserCredsPolicyFile --profile $LzAccessRoleProfile
 } else {
-    aws iam create-policy-version --set-as-default --policy-arn $LzGroupPolicyArn --policy-document file://$LzPolicyDocument --profile $LzAccessRoleProfile
+    Write-LzHost $indent "    - Updating policy IAMUserCredsPolicy"
+    $null = aws iam create-policy-version --set-as-default --policy-arn $LzGroupPolicyArn --policy-document file://$IamUserCredsPolicyFile --profile $LzAccessRoleProfile
 }
-
-Write-Host "Processing Complete"
+Write-LzHost $indent "If you receive an error stating you have exceeded the allowable versions limit on the policy document,"
+Write-LzHost $indent "please use the AWS Console to remove older versions and then rerun this script."
+Write-LzHost $indent "Processing Complete"
