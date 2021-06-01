@@ -161,7 +161,6 @@ else {
 
 
 # Check if account is in OU
-$LzOrgUnitID = $ouIds[($LzOUName)]
 $LzOUChildren = aws organizations list-children --parent-id $LzOrgUnitID --child-type ACCOUNT --profile $LzMgmtProfile | ConvertFrom-Json 
 $LzOUChild = $LzOUChildren.Children | Where-Object Id -EQ $LzAcctId
 if($null -ne $LzOUChild) {
