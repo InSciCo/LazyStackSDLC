@@ -196,12 +196,17 @@ $null = aws configure set role_arn arn:aws:iam::${LzAcctId}:role/OrganizationAcc
 $null = aws configure set source_profile $LzMgmtProfile --profile $LzAccessRoleProfile
 $null = aws configure set region $LzRegion --profile $LzAccessRoleProfile
 
+$IamUserCredsPolicyFile = "IAMUserCredsPolicy.json"
+if(!(Test-Path $IamUserCredsPolicyFile)) {
+    $IamUserCredsPolicyFile = "../LazyStackSMF/IAMUserCredsPolicy.json"
+}
+
 
 $LzGroupPolicyArn = aws iam list-policies --query 'Policies[?PolicyName==`IAMUserCredsPolicy`].{ARN:Arn}' --output text --profile $LzAccessRoleProfile
 if($null -eq $LzGroupPolicyArn)
 {
     Write-LzHost $indent "- Adding policy IAMUserCredsPolicy"
-    $LzGroupPolicy = aws iam create-policy --policy-name IAMUserCredsPolicy --policy-document file://$iamUserCredsPolicyFile --profile $LzAccessRoleProfile | ConvertFrom-Json
+    $LzGroupPolicy = aws iam create-policy --policy-name IAMUserCredsPolicy --policy-document file://$IamUserCredsPolicyFile --profile $LzAccessRoleProfile | ConvertFrom-Json
     $LzGroupPolicyArn = $LzGroupPolicy.Policy.Arn
 } else {
     Write-LzHost $indent "-Found IAMuserCredsPolicy"
