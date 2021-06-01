@@ -17,7 +17,7 @@ Set-SMF $smf #save the file
 $orgCode = @($smf.Keys)[0]
 Write-LzHost $indent "OrgCode:" $orgCode
 $LzMgmtProfile = $smf.$orgCode.AWS.MgmtProfile
-Write-LzHost $indent "AWS Managment Account:" $LzMgmtProfile
+Write-LzHost $indent "AWS Management Account:" $LzMgmtProfile
 
 #$smf | ConvertTo-Yaml 
 
@@ -28,7 +28,7 @@ $awsOrgRootId = Get-AwsOrgRootId -mgmtAcctProfile $LzMgmtProfile
 
 $indent += 2
 if($awsOrgRootId -eq "") {
-    Write-LzHost $indent  "- No AWS Organziation Found for the" $LzMgmtProfile "account."
+    Write-LzHost $indent  "- No AWS Organization Found for the" $LzMgmtProfile "account."
     Write-LzHost $indent  "- We need to create one to continue installation."
     $create = Read-YesNo -prompt "Create AWS Organization?" -indent $indent
 
