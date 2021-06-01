@@ -192,7 +192,7 @@ $null = aws iam attach-group-policy --group-name Developers --policy-arn $LzGrou
 # IAMUserCredsPolicy
 $iamUserCredsPolicyFile = "IAMUserCredsPolicy.json"
 if(!(Test-Path $iamUserCredsPolicyFile)) {
-    $iamUserCredsPolicyFile = Path-Join ".." "LazyStacksSMF" "IAMUserCredsPolicy.json"
+    $iamUserCredsPolicyFile = Join-Path ".." "LazyStacksSMF" "IAMUserCredsPolicy.json"
 }
 
 Write-Host "    - Adding policy IAMUserCredsPolicy"
