@@ -7,6 +7,19 @@ $scriptPath = Split-Path $script:MyInvocation.MyCommand.Path
 Import-Module (Join-Path -Path $scriptPath -ChildPath LazyStackLib) -Force
 Import-Module (Join-Path -Path $scriptPath -ChildPath LazyStackUI) -Force
 
+$found = $false
+Get-InstalledModule | foreach-Object{
+    if($_.Name -eq "powershell-yaml"){
+        $found = $true
+    }
+}
+if(!$found){
+    Write-Host "Powershell-Yaml is a required dependency. Please ensure you have updated to Powershell 7.1.3 & install the requried module with the command: `n  Install-Module powershell-yaml"
+    Exit
+}else{
+    Write-Host "Powershell-Yaml Found: ${found}"
+}
+
 $settingsFile = "smf.yaml"
 $indent = 0
 
