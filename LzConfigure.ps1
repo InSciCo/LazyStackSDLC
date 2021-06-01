@@ -136,7 +136,7 @@ foreach($sysCode in $smf.$orgCode.Systems.Keys) {
             # Reference: https://awscli.amazonaws.com/v2/documentation/api/latest/reference/organizations/describe-create-account-status.html
             $LzAcctCreationCheck = 1
             do { 
-                Write-LzHost $indent  "-  Checking for successful account creation. TryCount=${LzAcctCreationCheck}"
+                Write-LzHost $indent  "- Checking for successful account creation. TryCount=${LzAcctCreationCheck}"
                 Start-Sleep -Seconds 5
                 $LzAcctStatus = aws organizations describe-create-account-status --create-account-request-id $LzAcctId --profile $LzMgmtProfile | ConvertFrom-Json
                 $LzAcctCreationCheck = $LzAcctCreationCheck + 1
@@ -242,9 +242,9 @@ foreach($sysCode in $smf.$orgCode.Systems.Keys) {
         $usergroups = aws iam list-groups-for-user --user-name $LzIAMUserName --profile $LzAccessRoleProfile | ConvertFrom-Json
         $group = ($usergroups.Groups | Where-Object GroupName -EQ Administrators)
         if($null -ne $group) {
-            Write-LzHost $indent  "- Found IAM User ${LzIAMUserName} in the ${LzAcctName} Account Admnistrators group."
+            Write-LzHost $indent  "- Found IAM User ${LzIAMUserName} in the ${LzAcctName} Account Administrators group."
         } else {
-            Write-LzHost $indent  "- Adding IAM User ${LzIAMUserName} to the ${LzAcctName} Account Admnistrators group."
+            Write-LzHost $indent  "- Adding IAM User ${LzIAMUserName} to the ${LzAcctName} Account Administrators group."
             $null = aws iam add-user-to-group --user-name $LzIAMUserName --group-name Administrators --profile $LzAccessRoleProfile
         }
 
