@@ -159,7 +159,7 @@ function Get-SMF {
                                     Description = "Delete PR Stack on Pull Request Merge"
                                     TemplatePath = "../LazyStackSMF/Test_CodeBuild_PR_Merge.yaml"
                                     Region = $awsRegion
-                                    TemplateParameters = [ordered]@{
+                                    TemplateParams = [ordered]@{
                                         RepoParam = $tutorialRepo 
                                     }
                                 }
@@ -173,7 +173,7 @@ function Get-SMF {
                                     Description = "Update Production Stack on Pull Request Merge"
                                     TemplatePath = "../LazyStackSMF/Prod_CodeBuild_PR_Merge.yaml"
                                     Region = $awsRegion
-                                    TemplateParameters = [ordered]@{
+                                    TemplateParams = [ordered]@{
                                         RepoParam = $tutorialRepo 
                                         UtilRepoParam = $utilRepo
                                         ProdStackNameParam = $awsRegion + "-petstore"
