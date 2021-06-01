@@ -7,53 +7,39 @@ $scriptPath = Split-Path $script:MyInvocation.MyCommand.Path
 Import-Module (Join-Path -Path $scriptPath -ChildPath LazyStackLib) -Force
 Import-Module (Join-Path -Path $scriptPath -ChildPath LazyStackUI) -Force
 
-$indent = 1
+$settingsFile = "smf.yaml"
+$indent = 0
 
-$LzOrgCode = (Read-Host "Enter your OrgCode")
-
-$LzRegion = ""
-do {
-    $LzMgmtProfile = "${LzOrgcode}Mgmt"
-    $LzMgmtProfileInput = (Read-Host "Enter your AWS CLI Management Account Profile (default: ${LzOrgCode}Mgmt)")
-    
-    if($null -eq $LzMgmtProfileInput) {
-        $LzMgmtProfile = $LzMgmtProfileInput
-    }
-
-   $LzMgmtProfileKey = aws configure get profile.${LzMgmtProfile}.aws_access_key_id
-    if($LzMgmtProfileKey -eq "") {
-        Write-LzHost $indent "Profile ${LzMgmtProfile} not found or not configured with Access Key"
-        $LzMgmtProfileExists = $false
-    }
-    else  {
-        $LzMgmtProfileExists = $true
-        # Grab region in managment profile as default for new IAM User
-        $LzRegion = aws configure get profile.${LzMgmtProfile}.region
-    }
-
-    # Make sure LzMgmtProfile is associated with an IAM User in an Account belonging to an Organization
-    $null = aws organizations describe-organization --profile $LzMgmtProfile
-    if($? -eq $false) {
-        Write-LzHost $indent "${LzMgmtProfile} profile is associated with an IAM User not administering an Organization."
-        Exit
-    }
+if(!(Test-Path $settingsFile)) {
+    Write-LzHost $indent "Error: Can't find ${settingsFile}"
+    exit
 }
-until ($LzMgmtProfileExists)
+
+$smf = Get-SMF $settingsFile # this routine may prompt user for OrgCode and MgmtProfile
+$LzOrgCode = @($smf.Keys)[0]
+Write-LzHost $indent "OrgCode:" $LzOrgCode
+$LzMgmtProfile = $smf.$LzOrgCode.AWS.MgmtProfile
+Write-LzHost $indent "AWS Managment Account:" $LzMgmtProfile
+$LzOUName = "DevOU"
+
+$LzMgmtProfileKey = aws configure get profile.${LzMgmtProfile}.aws_access_key_id
+if($LzMgmtProfileKey -eq "") {
+    Write-LzHost $indent "Profile ${LzMgmtProfile} not found or not configured with Access Key"
+    exit
+}
+$LzRegion = aws configure get profile.${LzMgmtProfile}.region
+
+$null = aws organizations describe-organization --profile $LzMgmtProfile
+if($? -eq $false) {
+    Write-LzHost $indent "${LzMgmtProfile} profile is associated with an IAM User not administering an Organization."
+    Exit
+}
+
 
 if ($LzRegion -eq "") {
     $LzRegion = "us-east-1"
 }
 
-$LzRegionInput = Read-Host "Enter Region (default ${LzRegion})"
-if($LzRegionInput -ne "") {
-    $LzRegion = $LzRegionInput
-}
-
-$LzOUName = "DevOU"
-$LzOUNameInput = Read-Host "Enter the Development OU Name (default ${LzOUName})"
-if($LzOUNameInput -ne "") {
-    $LzOUName = $LzOUNameInput
-}
 
 do {
     $LzDevHandle = Read-Host "Enter the Developer's Handle (ex: Joe)"
@@ -197,7 +183,7 @@ We use the aws configure command to set this up.
 # Create AccessRole profile
 # Reference: https://awscli.amazonaws.com/v2/documentation/api/latest/reference/configure/set.html
 $LzAccessRoleProfile = $LzAcctName + "AccessRole"
-Write-LzHost $indent "Adding ${LzAccessRole} profile and associating it with the ${LzMgmtProfile} profile. "
+Write-LzHost $indent "Adding ${LzAccessRoleProfile} profile and associating it with the ${LzMgmtProfile} profile. "
 $null = aws configure set role_arn arn:aws:iam::${LzAcctId}:role/OrganizationAccountAccessRole --profile $LzAccessRoleProfile
 $null = aws configure set source_profile $LzMgmtProfile --profile $LzAccessRoleProfile
 $null = aws configure set region $LzRegion --profile $LzAccessRoleProfile
@@ -224,10 +210,10 @@ if($null -eq $LzGroupPolicyArn)
 $awsgroups = aws iam list-groups --profile $LzAccessRoleProfile | ConvertFrom-Json
 $group = ($awsgroups.Groups | Where-Object GroupName -EQ "Developers")
 if($null -eq $group) {
-    Write-LzHost $indent  "- Creating Administrators group in the ${LzAcctName} account."
-    $null = aws iam create-group --group-name Administrators --profile $LzAccessRoleProfile
+    Write-LzHost $indent  "- Creating Developers group in the ${LzAcctName} account."
+    $null = aws iam create-group --group-name Developers --profile $LzAccessRoleProfile
 } else {
-    Write-LzHost $indent  "- Found Administrators group in ${LzAcctName} account."
+    Write-LzHost $indent  "- Found Developers group in ${LzAcctName} account."
 }
 
 
