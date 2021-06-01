@@ -216,7 +216,7 @@ foreach($sysCode in $smf.$orgCode.Systems.Keys) {
         }
 
         # Create User in Account
-        $LzIAMUserName = $LzAcctName + "IAM"
+        $LzIAMUserName = $LzAcctName
         $users = aws iam list-users --profile $LzAccessRoleProfile | ConvertFrom-Json
         $user = ($users.Users | Where-Object UserName -EQ $LzIAMUserName)
         if($null -ne $user) {
