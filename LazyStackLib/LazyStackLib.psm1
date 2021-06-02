@@ -1,7 +1,7 @@
 #LazyStackLib.psm1
 
 function Test-LzDependencies {
-    Test_YamlInstalled
+    Test-YamlInstalled
 }
 
 function Test-YamlInstalled {
