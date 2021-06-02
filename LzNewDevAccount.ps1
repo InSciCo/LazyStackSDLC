@@ -6,19 +6,7 @@ Write-LzHost $indent "Note: Press return to accept a default value."
 $scriptPath = Split-Path $script:MyInvocation.MyCommand.Path 
 Import-Module (Join-Path -Path $scriptPath -ChildPath LazyStackLib) -Force
 Import-Module (Join-Path -Path $scriptPath -ChildPath LazyStackUI) -Force
-
-$found = $false
-Get-InstalledModule | foreach-Object{
-    if($_.Name -eq "powershell-yaml"){
-        $found = $true
-    }
-}
-if(!$found){
-    Write-Host "Powershell-Yaml is a required dependency. Please ensure you have updated to Powershell 7.1.3 & install the requried module with the command: `n  Install-Module powershell-yaml"
-    Exit
-}else{
-    Write-Host "Powershell-Yaml Found: ${found}"
-}
+Test-LzDependencies
 
 $settingsFile = "smf.yaml"
 $indent = 0
@@ -48,11 +36,9 @@ if($? -eq $false) {
     Exit
 }
 
-
 if ($LzRegion -eq "") {
     $LzRegion = "us-east-1"
 }
-
 
 do {
     $LzDevHandle = Read-Host "Enter the Developer's Handle (ex: Joe)"
@@ -106,22 +92,12 @@ Write-LzHost $indent "Processing Starting"
 
 # Get LzRootId - note: Currently, there should only ever be one root.
 # Reference: https://awscli.amazonaws.com/v2/documentation/api/latest/reference/organizations/list-roots.html
-$LzRoots = aws organizations list-roots --profile $LzMgmtProfile | ConvertFrom-Json
-$LzRootId = $LzRoots.Roots[0].Id 
+$LzRootId = Get-AwsOrgRootId -awsProfile $LzMgmtProfile 
 
 # Get Organizational Unit
-$LzOrgUnitsList = aws organizations list-organizational-units-for-parent --parent-id $LzRootId --profile $LzMgmtProfile | ConvertFrom-Json
-if($? -eq $false) {
-    Write-LzHost $indent "Could not find ${LzOUName} Organizational Unit"
-    Exit
-}
-if($LzOrgUnitsList.OrganizationalUnits.Count -eq 0) {
-    Write-LzHost $indent "There are no Organizational Units in root organization."
-    Exit    
-}
 
-$LzOrgUnit = $LzOrgUnitsList.OrganizationalUnits | Where-Object Name -eq $LzOUName
-if($? -eq $false)
+$lzOrgUnit = Get-AwsOrgUnit -awsProfile $LzMgmtProfile -ouName $LzOUName
+if($null -eq $LzOrgUnit -Or $lzOrgUnit -eq "")
 {
     Write-LzHost $indent "Could not find ${LzOUName} Organizational Unit"
     Exit
@@ -129,8 +105,7 @@ if($? -eq $false)
 
 $LzOrgUnitId = $LzOrgUnit.Id
 
-
-$LzAccounts = aws organizations list-accounts --profile $LzMgmtProfile | ConvertFrom-Json
+$LzAccounts = Get-AwsAccounts -awsProfile $LzMgmtProfile
 $LzAcct = ($LzAccounts.Accounts | Where-Object Name -EQ $LzAcctName)
 
 if($null -ne $LzAcct) {
@@ -141,7 +116,8 @@ else {
     # Create Dev Account  -- this is an async operation so we have to poll for success
     # Reference: https://awscli.amazonaws.com/v2/documentation/api/latest/reference/organizations/create-account.html
     Write-LzHost $indent "Creating Developer Account: ${LzAcctName}"
-    $LzAcct = aws organizations create-account --email $LzRootEmail --account-name $LzAcctName --profile $LzMgmtProfile | ConvertFrom-Json
+
+    $LzAcct = New-AwsAccount -awsProfile $LzMgmtProfile -acctName $LzAcctName -email $LzRootEmail
     $LzAcctId = $LzAcct.CreateAccountStatus.Id
 
     # poll for success
@@ -150,7 +126,7 @@ else {
     do {
         Write-LzHost $indent "  - Checking for successful account creation. TryCount=${LzAcctCreationCheck}"
         Start-Sleep -Seconds 5
-        $LzAcctStatus = aws organizations describe-create-account-status --create-account-request-id $LzAcctId --profile $LzMgmtProfile | ConvertFrom-Json
+        $LzAcctStatus = Get-AwsAccountStatus -awsProfile $LzMgmtProfile -acctId $LzAcctId 
         $LzAcctCreationCheck = $LzAcctCreationCheck + 1
     }
     while ($LzAcctStatus.CreateAccountStatus.State -eq "IN_PROGRESS")
@@ -166,7 +142,7 @@ else {
 
 
 # Check if account is in OU
-$LzOUChildren = aws organizations list-children --parent-id $LzOrgUnitID --child-type ACCOUNT --profile $LzMgmtProfile | ConvertFrom-Json 
+$LzOUChildren = Get-AwsOrgUnitAccounts -awsProfile $LzMgmtProfile -ouId $LzOrgUnitId
 $LzOUChild = $LzOUChildren.Children | Where-Object Id -EQ $LzAcctId
 if($null -ne $LzOUChild) {
     Write-LzHost $indent  "- Account is in ${LzOUName} Organizational Unit."
@@ -175,9 +151,8 @@ else {
     # Move new Account to OU
     # Reference: https://awscli.amazonaws.com/v2/documentation/api/latest/reference/organizations/move-account.html
     Write-LzHost $indent  "- Moving ${LzAcctName} account to ${LzOUName} Organizational Unit"
-    $null = aws organizations move-account --account-id $LzAcctId --source-parent-id $LzRootId --destination-parent-id $LzOrgUnitId --profile $LzMgmtProfile
+    Move-AwsAccount -awsProfile $LzMgmtProfile -sourceId $LzRootId -destId $LzOrgUnitId -acctId $LzAcctId
 }
-
 
 <# 
 Reference: https://docs.aws.amazon.com/organizations/latest/userguide/orgs_manage_accounts_access.html
@@ -197,9 +172,7 @@ We use the aws configure command to set this up.
 # Reference: https://awscli.amazonaws.com/v2/documentation/api/latest/reference/configure/set.html
 $LzAccessRoleProfile = $LzAcctName + "AccessRole"
 Write-LzHost $indent "Adding ${LzAccessRoleProfile} profile and associating it with the ${LzMgmtProfile} profile. "
-$null = aws configure set role_arn arn:aws:iam::${LzAcctId}:role/OrganizationAccountAccessRole --profile $LzAccessRoleProfile
-$null = aws configure set source_profile $LzMgmtProfile --profile $LzAccessRoleProfile
-$null = aws configure set region $LzRegion --profile $LzAccessRoleProfile
+Set-AwsProfileRole -awsProfile $LzMgmtProfile -accessProfile $LzAccessRoleProfile -region $LzRegion
 
 $IamUserCredsPolicyFile = "IAMUserCredsPolicy.json"
 if(!(Test-Path $IamUserCredsPolicyFile)) {
@@ -207,11 +180,11 @@ if(!(Test-Path $IamUserCredsPolicyFile)) {
 }
 
 
-$LzGroupPolicyArn = aws iam list-policies --query 'Policies[?PolicyName==`IAMUserCredsPolicy`].{ARN:Arn}' --output text --profile $LzAccessRoleProfile
+$LzGroupPolicyArn = Get-AwsPolicyArn -awsProfile $LzAccessRoleProfile -policyName IAMUserCredsPolicy
 if($null -eq $LzGroupPolicyArn)
 {
     Write-LzHost $indent "- Adding policy IAMUserCredsPolicy"
-    $LzGroupPolicy = aws iam create-policy --policy-name IAMUserCredsPolicy --policy-document file://$IamUserCredsPolicyFile --profile $LzAccessRoleProfile | ConvertFrom-Json
+    $LzGroupPolicy = New-AwsPolicy -awsProfile $LzAccessRoleProfile -policyName IAMUserCredsPolicy -policyFileName $IamUserCredsPolicyFile
     $LzGroupPolicyArn = $LzGroupPolicy.Policy.Arn
 } else {
     Write-LzHost $indent "-Found IAMuserCredsPolicy"
@@ -220,11 +193,12 @@ if($null -eq $LzGroupPolicyArn)
 
 # Create Developers Group for Developers Account
 # Reference: https://docs.aws.amazon.com/cli/latest/userguide/cli-services-iam-new-user-group.html
-$awsgroups = aws iam list-groups --profile $LzAccessRoleProfile | ConvertFrom-Json
+$awsgroups = Get-AwsGroups -awsProfile $LzAccessRoleProfile
 $group = ($awsgroups.Groups | Where-Object GroupName -EQ "Developers")
+
 if($null -eq $group) {
     Write-LzHost $indent  "- Creating Developers group in the ${LzAcctName} account."
-    $null = aws iam create-group --group-name Developers --profile $LzAccessRoleProfile
+    $null = New-AwsGroup -awsProfile $LzAccessRoleProfile -groupName Developers
 } else {
     Write-LzHost $indent  "- Found Developers group in ${LzAcctName} account."
 }
@@ -232,40 +206,33 @@ if($null -eq $group) {
 
 # Add policies to Group
 # PowerUserAccess
-$policies = aws iam list-attached-group-policies --group-name Developers --profile $LzAccessRoleProfile
-# PowerUserAccess
-$policy = ($policies.AttachedPolicies  | Where-Object PolicyName -EQ PowerUserAccess) 
+$policy = Get-AwsGroupPolicy -awsProfile $LzAccessRoleProfile -groupName Developers -policyName PowerUserAccess
 if($null -ne $policy) {
     Write-LzHost $indent  "- Found PowerUserAccess Policy in Developers group"
 } else {
     Write-LzHost $indent  "- Adding PowerUserAccess Policy to Developers group"
-    $LzGroupPolicyArn = aws iam list-policies --query 'Policies[?PolicyName==`PowerUserAccess`].{ARN:Arn}' --output text --profile $LzAccessRoleProfile 
-    $null = aws iam attach-group-policy --group-name Developers --policy-arn $LzGroupPolicyArn --profile $LzAccessRoleProfile
+    Set-AwsPolicyToGroup -awsProfile $LzAccessRoleProfile -groupName Developers -policyName PowerUserAccess
 }
 
 # IAMUserCredsPolicy
 $policy = ($policies.AttachedPolicies  | Where-Object PolicyName -EQ IAMUserCredsPolicy) 
+$policy = Get-AwsGroupPolicy -awsProfile $LzAccessRoleProfile -groupName Developers -policyName IAMUserCredsPolicy
 if($null -ne $policy) {
     Write-LzHost $indent  "- Found IAMUserCredsPolicy Policy in Developers group"
 } else {
     Write-LzHost $indent  "- Adding IAMUserCredsPolicy Policy to Developers group"
-    $LzGroupPolicyArn = aws iam list-policies --query 'Policies[?PolicyName==`IAMUserCredsPolicy`].{ARN:Arn}' --output text --profile $LzAccessRoleProfile 
-    $null = aws iam attach-group-policy --group-name Developers --policy-arn $LzGroupPolicyArn --profile $LzAccessRoleProfile
+    Set-AwsPolicyToGroup -awsProfile $LzAccessRoleProfile -groupName Developers -policyName IAMUserCredsPolicy
 }
 
 # Create User in Account
 $LzIAMUserName = $LzAcctName
-$users = aws iam list-users --profile $LzAccessRoleProfile | ConvertFrom-Json
-$user = ($users.Users | Where-Object UserName -EQ $LzIAMUserName)
+$user = Get-AwsUser -awsProfile $LzAccessRoleProfile -userName $LzIAMUserName
 if($null -ne $user) {
     Write-LzHost $indent  "- Found IAM User ${LzIAMUserName} in ${LzAcctName} account."
 } else {
     # Reference: https://awscli.amazonaws.com/v2/documentation/api/latest/reference/iam/create-user.html
     Write-LzHost $indent  "- Creating IAM User ${LzIAMUserName} in ${LzAcctName} account."
-    $null = aws iam create-user --user-name $LzIAMUserName --profile $LzAccessRoleProfile | ConvertFrom-Json
-    # Reference: https://docs.aws.amazon.com/cli/latest/userguide/cli-services-iam-new-user-group.html
-    $LzPassword = "" + (Get-Random -Minimum 10000 -Maximum 99999 ) + "aA!"
-    $null = aws iam create-login-profile --user-name $LzIAMUserName --password $LzPassword --password-reset-required --profile $LzAccessRoleProfile
+    $LzPassword = New-AwsUserAndProfile -awsProfile $LzAccessRoleProfile -userName $LzIAMUserName
 
     # Output Test Account Creds
     Write-LzHost $indent  "- Writing the IAM User Creds into ${LzIAMUserName}_credentials.txt"
@@ -278,15 +245,13 @@ if($null -ne $user) {
 
 
 # Add user to Group 
-$usergroups = aws iam list-groups-for-user --user-name $LzIAMUserName --profile $LzAccessRoleProfile | ConvertFrom-Json
-$group = ($usergroups.Groups | Where-Object GroupName -EQ Developers)
-if($null -ne $group) {
+$userInGroup = Test-AwsUserInGroup -awsProfile $LzAccessRoleProfile -userName $LzIAMUserName -groupName Developers
+if($userInGroup) {
     Write-LzHost $indent  "- Found IAM User ${LzIAMUserName} in the ${LzAcctName} Account Developers group."
 } else {
     Write-LzHost $indent  "- Adding IAM User ${LzIAMUserName} to the ${LzAcctName} Account Developers group."
-    $null = aws iam add-user-to-group --user-name $LzIAMUserName --group-name Developers --profile $LzAccessRoleProfile
+    Set-AwsUserGroup -awsProfile $LzAccessRoleProfile -userName $LzIAMUserName -groupName Developers
 }
-
 
 Write-LzHost $indent "Processing Complete"
 

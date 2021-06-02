@@ -4,6 +4,7 @@ Write-LzHost $indent "This script creates/updates the IAMUserCreds customer mana
 $scriptPath = Split-Path $script:MyInvocation.MyCommand.Path 
 Import-Module (Join-Path -Path $scriptPath -ChildPath LazyStackLib) -Force
 Import-Module (Join-Path -Path $scriptPath -ChildPath LazyStackUI) -Force
+Test-LzDependencies
 
 $settingsFile = "smf.yaml"
 $indent = 0
@@ -72,13 +73,13 @@ Write-LzHost $indent "Processing Starting"
  $LzAccessRoleProfile = $LzAcctName + "AccessRole"
 
 # IAMUserCredsPolicy
-$LzGroupPolicyArn = aws iam list-policies --query 'Policies[?PolicyName==`IAMUserCredsPolicy`].{ARN:Arn}' --output text --profile $LzAccessRoleProfile
+$LzGroupPolicyArn = Get-AwsPolicyArn -awsProfile $LzAccessRoleProfile -policyName IAMUserCredsPolicy
 if($null -eq $LzGroupPolicyArn) {
     Write-LzHost $indent "    - Adding policy IAMUserCredsPolicy"
-    $null = aws iam create-policy --policy-name $LzPolicyName --policy-document file://$IamUserCredsPolicyFile --profile $LzAccessRoleProfile
+    $null = New-AwsPolicy -awsProfile $LzAccessRoleProfile -policyName IAMUserCredsPolicy -policyFileName $IamUserCredsPolicyFile
 } else {
     Write-LzHost $indent "    - Updating policy IAMUserCredsPolicy"
-    $null = aws iam create-policy-version --set-as-default --policy-arn $LzGroupPolicyArn --policy-document file://$IamUserCredsPolicyFile --profile $LzAccessRoleProfile
+    $null = New-AwsPolicyVersion -awsProfile $LzAccessRoleProfile -policyArn $LzGroupPolicyArn -policyFileName $IamUserCredsPolicyFile
 }
 Write-LzHost $indent "If you receive an error stating you have exceeded the allowable versions limit on the policy document,"
 Write-LzHost $indent "please use the AWS Console to remove older versions and then rerun this script."

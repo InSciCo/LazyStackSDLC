@@ -1,9 +1,13 @@
+Write-LzHost $indent  "LzDeployPipeline.ps1 V1.0.0"
+Write-LzHost $indent  "Use this script to deploy a pipeline"
+
 $scriptPath = Split-Path $script:MyInvocation.MyCommand.Path 
 Import-Module (Join-Path -Path $scriptPath -ChildPath LazyStackLib) -Force
 Import-Module (Join-Path -Path $scriptPath -ChildPath LazyStackUI) -Force
+Test-LzDependencies
+
 $indent = 1
-Write-LzHost $indent  "LzDeployPipeline.ps1 V1.0.0"
-Write-LzHost $indent  "Use this script to deploy a pipeline"
+
 
 $settingsFile = "smf.yaml"
 
