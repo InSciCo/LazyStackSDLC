@@ -1,5 +1,5 @@
-Write-LzHost $indent "LzUpdateDevCreds.ps1 - V1.0.0"
-Write-LzHost $indent "This script creates/updates the IAMUserCreds customer managed policy for a developer account."
+Write-Host "LzUpdateDevCreds.ps1 - V1.0.0"
+Write-Host "This script creates/updates the IAMUserCreds customer managed policy for a developer account."
 
 $scriptPath = Split-Path $script:MyInvocation.MyCommand.Path 
 Import-Module (Join-Path -Path $scriptPath -ChildPath LazyStackLib) -Force

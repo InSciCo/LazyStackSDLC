@@ -283,7 +283,7 @@ function Move-AwsAccount {
 }
 
 function Set-AwsProfileRole {
-    param([string]$awsProfile, [string]$accessProfile, [string]$region)
+    param([string]$awsProfile, [string]$accessProfile, [string]$acctId, [string]$region)
     if($null -eq $awsProfile -Or $awsProfile -eq "" ) {
         throw "Set-AwsProfileRole: Parameter Error: awsProfile empty" 
     }
@@ -294,11 +294,11 @@ function Set-AwsProfileRole {
         throw "Set-AwsProfileRole: Parameter Error: region empty" 
     }
 
-    $null = aws configure set role_arn arn:aws:iam::${LzAcctId}:role/OrganizationAccountAccessRole --profile $awsProfile 2>&1
+    $null = aws configure set role_arn arn:aws:iam::${acctId}:role/OrganizationAccountAccessRole --profile $accessprofile 2>&1
 
-    $null = aws configure set source_profile $LzMgmtProfile --profile $awsProfile 2>&1
+    $null = aws configure set source_profile $LawsProfile --profile $accessProfile 2>&1
 
-    $null = aws configure set region $LzRegion --profile $awsProfile 2>&1
+    $null = aws configure set region $LzRegion --profile $accessProfile 2>&1
 
 }
 
@@ -364,8 +364,8 @@ function Get-AwsPolicyArn {
         throw "Get-AwsPolicyArn: Parameter Error: policyName empty" 
     }
 
-    $query = "'Policies[?PolicyName==" + '`' + $policyName + '`' + "].{ARN:Arn}'"
-    $result = aws iam list-policies --query $query --output text --profile $awsProfile 2>&1
+    $query = "Policies[?PolicyName=='" + $policyName +"'].{ARN:Arn}"
+    $result = aws iam list-policies --query $query --output text --profile $awsProfile
 
     if($null -ne $result -And $result -ne "") {
         return $result 
@@ -539,8 +539,8 @@ function Set-AwsCodeBuildCredentials {
 
     $result = aws codebuild import-source-credentials --server-type $serverType --auth-type PERSONAL_ACCESS_TOKEN --profile $awsProfile --token $token 2>&1
 
-    if($null -ne $result -And $result -like "arn:*")  {
-        return $result
+    if($null -ne $result -And $result -like "{*")  {
+        return $result | ConvertFrom-Json
     }
 
     throw ("Set-AwsCodeBuildCredentials failed")
@@ -930,7 +930,7 @@ function New-AwsSysAccount {
     # Reference: https://awscli.amazonaws.com/v2/documentation/api/latest/reference/configure/set.html
     $LzAccessRoleProfile = $LzAcctName + "AccessRole"
     Write-Host "Adding or Updating ${LzAccessRole} profile and associating it with the ${LzMgmtProfile} profile. "
-    Set-AwsProfileRole -awsProfile $LzMgmtProfile -accessprofile $LzAccessRoleProfile -region $LzRegion
+    Set-AwsProfileRole -awsProfile $LzMgmtProfile -accessprofile $LzAccessRoleProfile -acctId $LzAcctId -region $LzRegion
 
     # Create Administrators Group for Test Account
     # Reference: https://docs.aws.amazon.com/cli/latest/userguide/cli-services-iam-new-user-group.html
@@ -983,7 +983,7 @@ function New-AwsSysAccount {
 
     #update GitHub Personal Access Token
     $LzPat = Get-Content -Path GitCodeBuildToken.pat
-    Set-AwsCodeBuildCredentials -awsProfile $LzAccessRoleProfile -serverType GITHUB -token $LzPat
+    $null = Set-AwsCodeBuildCredentials -awsProfile $LzAccessRoleProfile -serverType GITHUB -token $LzPat
     return $true
 }
 

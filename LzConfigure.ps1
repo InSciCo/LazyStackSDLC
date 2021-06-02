@@ -1,5 +1,5 @@
-Write-LzHost $indent  "LzConfigure.ps1 V1.0.0"
-Write-LzHost $indent  "Use this script to setup and manage your LazyStackSMF Organization"
+Write-Host  "LzConfigure.ps1 V1.0.0"
+Write-Host   "Use this script to setup and manage your LazyStackSMF Organization"
 
 # We import lib in script directory with -Force each time to ensure lib version matches script version
 # Performance is not an issue with these infrequently executed scripts
@@ -56,7 +56,7 @@ Write-LzHost $indent  "- AWS OrgUnits"
 $indent += 2
 #AWS Organizational Units - create ones that don't exist 
 #read existing OUs
-$ouList = Get-AwsOrgUnits -parent-id $awsOrgRootId  profile $LzMgmtProfile 
+$ouList = Get-AwsOrgUnits -awsprofile $LzMgmtProfile -orgRootId $awsOrgRootId
 
 $ouIds = @{}
 foreach($orgUnitName in $smf.$orgCode.AWS.OrgUnits) {
@@ -181,12 +181,12 @@ foreach($sysCode in $smf.$orgCode.Systems.Keys) {
         $LzAccessRoleProfile = $LzAcctName + "AccessRole"
         #note: This updates in place
         Write-LzHost $indent  "- Adding or Updating ${LzAccessRoleProfile} profile and associating it with the ${LzMgmtProfile} profile. "
-        Set-AwsProfileRole -awsProfile $LzMgmtProfile -accessProfile $LzAccessRoleProfile -region $LzRegion
+        Set-AwsProfileRole -awsProfile $LzMgmtProfile -accessProfile $LzAccessRoleProfile -acctId $LzAcctId -region $LzRegion
 
         # Create Administrators Group for Test Account
         # Reference: https://docs.aws.amazon.com/cli/latest/userguide/cli-services-iam-new-user-group.html
         
-        $awsgroups = et-AwsGroups -awsProfile $LzAccessRoleProfile 
+        $awsgroups = Get-AwsGroups -awsProfile $LzAccessRoleProfile 
         $group = ($awsgroups.Groups | Where-Object GroupName -EQ "Administrators")
         if($null -eq $group) {
             Write-LzHost $indent  "- Creating Administrators group in the ${LzAcctName} account."
@@ -238,7 +238,7 @@ foreach($sysCode in $smf.$orgCode.Systems.Keys) {
         do {
             if(Test-Path "GitCodeBuildToken.pat") {
                 $LzPat = Get-Content -Path GitCodeBuildToken.pat
-                Set-AwsCodeBuildCredentials -awsProfile $LzAccessRoleProfile -serverType GITHUB -token $LzPat
+                $null = Set-AwsCodeBuildCredentials -awsProfile $LzAccessRoleProfile -serverType GITHUB -token $LzPat
                 $fileprocessed = $true
             } else {
                 Write-LzHost $indent  "--------- Could not find GitCodeBuildToken.pat file! Please see install documentation"

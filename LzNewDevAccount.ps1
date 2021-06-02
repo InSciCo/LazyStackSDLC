@@ -1,7 +1,7 @@
-Write-LzHost $indent "LzNewDevAccount.ps1 - V1.0.0"
-Write-LzHost $indent "This script adds a developer account to the Dev Organizational Unit."
-Write-LzHost $indent "It also adds a Admin Access Profile so this workstation can administer the new Account."
-Write-LzHost $indent "Note: Press return to accept a default value."
+Write-Host "LzNewDevAccount.ps1 - V1.0.0"
+Write-Host "This script adds a developer account to the Dev Organizational Unit."
+Write-Host "It also adds a Admin Access Profile so this workstation can administer the new Account."
+Write-Host "Note: Press return to accept a default value."
 
 $scriptPath = Split-Path $script:MyInvocation.MyCommand.Path 
 Import-Module (Join-Path -Path $scriptPath -ChildPath LazyStackLib) -Force
@@ -172,7 +172,7 @@ We use the aws configure command to set this up.
 # Reference: https://awscli.amazonaws.com/v2/documentation/api/latest/reference/configure/set.html
 $LzAccessRoleProfile = $LzAcctName + "AccessRole"
 Write-LzHost $indent "Adding ${LzAccessRoleProfile} profile and associating it with the ${LzMgmtProfile} profile. "
-Set-AwsProfileRole -awsProfile $LzMgmtProfile -accessProfile $LzAccessRoleProfile -region $LzRegion
+Set-AwsProfileRole -awsProfile $LzMgmtProfile -accessProfile $LzAccessRoleProfile -acctId $LzAcctId -region $LzRegion
 
 $IamUserCredsPolicyFile = "IAMUserCredsPolicy.json"
 if(!(Test-Path $IamUserCredsPolicyFile)) {
