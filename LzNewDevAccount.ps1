@@ -171,7 +171,7 @@ We use the aws configure command to set this up.
 # Create AccessRole profile
 # Reference: https://awscli.amazonaws.com/v2/documentation/api/latest/reference/configure/set.html
 $LzAccessRoleProfile = $LzAcctName + "AccessRole"
-Write-LzHost $indent "Adding ${LzAccessRoleProfile} profile and associating it with the ${LzMgmtProfile} profile. "
+Write-LzHost $indent "- Adding ${LzAccessRoleProfile} profile and associating it with the ${LzMgmtProfile} profile. "
 Set-AwsProfileRole -awsProfile $LzMgmtProfile -accessProfile $LzAccessRoleProfile -acctId $LzAcctId -region $LzRegion
 
 $IamUserCredsPolicyFile = "IAMUserCredsPolicy.json"
@@ -187,7 +187,7 @@ if($null -eq $LzGroupPolicyArn)
     $LzGroupPolicy = New-AwsPolicy -awsProfile $LzAccessRoleProfile -policyName IAMUserCredsPolicy -policyFileName $IamUserCredsPolicyFile
     $LzGroupPolicyArn = $LzGroupPolicy.Policy.Arn
 } else {
-    Write-LzHost $indent "-Found IAMuserCredsPolicy"
+    Write-LzHost $indent "- Found IAMuserCredsPolicy"
 }
 
 

@@ -27,27 +27,28 @@ function Test-AwsProfileExists {
 
     return ($list -contains $awsProfile)
 }
-function Get-IsRegionAvailable {
+function Test-AwsRegionAvailable {
     param ([string]$awsProfile, [string]$regionName)
     if($null -eq $awsProfile -Or $awsProfile -eq "" ) {
-        throw "Get-IsRegionAvailable: Parameter Error: awsProfile empty"
+        throw "Test-AwsRegionAvailable: Parameter Error: awsProfile empty"
     }
     if($null -eq $regionName -Or $regionName -eq "" ) {
-        throw "Get-IsRegionAvailable: Parameter Error: regionName empty"
+        throw "Test-AwsRegionAvailable: Parameter Error: regionName empty"
     }
 
     $result = aws ec2 describe-regions --all-regions --profile $awsProfile 2>&1
 
     if($null -eq $result) {
-        throw ("Get-IsRegionAvailable Error no regions found")    
+        throw ("Test-AwsRegionAvailable Error no regions found")    
     }
 
-    if($output -like "{*") {
-        $region = $result.Regions | Where-Object RegionName -EQ $regionName
+    if($result -like "{*") {
+        $regionlist = $result | ConvertFrom-Json
+        $region = $regionlist.Regions | Where-Object RegionName -EQ $regionName
         return  ($null -ne $region)        
     }  
 
-    throw ("Get-IsRegionAvailable Error:" + $output)
+    throw ("Test-AwsRegionAvailable Error:" + $result)
 }
 function Read-AwsRegion {
     param ([string]$awsProfile, [string]$prompt="Enter AWS Region", [string]$default, [int]$indent)
@@ -157,7 +158,8 @@ function Get-AwsOrgUnit {
     $result =  aws organizations list-organizational-units-for-parent --parent-id $orgRootId --profile $awsProfile 2>&1
     
     if($null -ne $result -And $result -like "{*") {
-        return $result.OrganizationalUnits | Where-Object Name -eq $ouName
+        $orgUnits = $result | ConvertFrom-Json
+        return $orgUnits.OrganizationalUnits | Where-Object Name -eq $ouName
     }
     throw ("Get-AwsOrgUnit Error: " + $result)
 }
@@ -296,9 +298,9 @@ function Set-AwsProfileRole {
 
     $null = aws configure set role_arn arn:aws:iam::${acctId}:role/OrganizationAccountAccessRole --profile $accessprofile 2>&1
 
-    $null = aws configure set source_profile $LawsProfile --profile $accessProfile 2>&1
+    $null = aws configure set source_profile $awsProfile --profile $accessProfile 2>&1
 
-    $null = aws configure set region $LzRegion --profile $accessProfile 2>&1
+    $null = aws configure set region $region --profile $accessProfile 2>&1
 
 }
 
@@ -328,7 +330,7 @@ function New-AwsGroup {
 
     $result =  aws iam create-group --group-name $groupName --profile $awsProfile 2>&1
 
-    if($null -eq $result -ANd $result -like "{*") {
+    if($null -ne $result -And $result -like "{*") {
         return $result | ConvertFrom-Json 
     }  
     throw ("New-AwsGroup Error" + $result)    
@@ -369,8 +371,9 @@ function Get-AwsPolicyArn {
 
     if($null -ne $result -And $result -ne "") {
         return $result 
+    } else {
+        return $null
     }  
-    throw ("Get-AwsPolicyArn: Policy ${policyName} not found")     
 }
 
 
@@ -429,6 +432,10 @@ function Set-AwsPolicyToGroup {
     }
 
     $groupPolicyArn = Get-AwsPolicyArn -awsProfile $awsProfile -policyName $policyName
+
+    if($null -eq $groupPolicyArn) {
+        throw ("Set-AwsPolicyToGroup Error: Could not find policy " + $policyName)
+    }
 
     $result =  aws iam attach-group-policy --group-name $groupName --policy-arn $groupPolicyArn --profile $awsProfile 2>&1
 
@@ -543,7 +550,7 @@ function Set-AwsCodeBuildCredentials {
         return $result | ConvertFrom-Json
     }
 
-    throw ("Set-AwsCodeBuildCredentials failed")
+    throw ("Set-AwsCodeBuildCredentials failed, Error: " + $result)
 }
 
 
@@ -614,7 +621,7 @@ function Get-SMF {
     $org = [ordered]@{
         $OrgCode = [ordered]@{
             AWS = [ordered]@{
-            awsProfile=$awsMgmtProfile
+            MgmtProfile=$awsMgmtProfile
             DefaultRegion=$awsRegion
                 OrgUnits= @(
                     "DevOU"
@@ -641,7 +648,7 @@ function Get-SMF {
                                     Description = "Create PR Stack on Pull Request Creation"
                                     TemplatePath = "../LazyStackSMF/Test_CodeBuild_PR_Create.yaml"                               
                                     Region = $awsRegion
-                                    TemplateParameters = [ordered]@{
+                                    TemplateParams = [ordered]@{
                                         RepoParam = $tutorialRepo 
                                         UtilRepoParam = $utilRepo
                                     }
