@@ -5,12 +5,13 @@ function Test-LzDependencies {
 }
 
 function Test-YamlInstalled {
-    Get-InstalledModule | foreach-Object{
+    Get-InstalledModule | ForEach-Object{
         if($_.Name -eq "powershell-yaml"){
+            write-host "found it"
             return
         }
     }
-    Write-Host "Powershell-Yaml is a required dependency."
+    Write-Host "Powershell-Yaml is a required dependency. Please install and try again."
     Exit
 }
 
