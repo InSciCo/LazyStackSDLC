@@ -123,7 +123,7 @@ foreach($sysCode in $smf.$orgCode.Systems.Keys) {
             # Reference: https://awscli.amazonaws.com/v2/documentation/api/latest/reference/organizations/create-account.html
             Write-LzHost $indent  "- Creating System Account: ${LzAcctName}" 
 
-            $LzAcct = New-AwsAccount --awsProfile $LzMgmtProfile -accountName $LzAcctName -email $email
+            $LzAcct = New-AwsAccount -awsProfile $LzMgmtProfile -acctName $LzAcctName -email $email
             $LzAcctId = $LzAcct.CreateAccountStatus.Id
 
             # poll for success
@@ -238,7 +238,7 @@ foreach($sysCode in $smf.$orgCode.Systems.Keys) {
         do {
             if(Test-Path "GitCodeBuildToken.pat") {
                 $LzPat = Get-Content -Path GitCodeBuildToken.pat
-                $null = Set-AwsCodeBuildCredentials -awsProfile $LzAccessRoleProfile -serverType GITHUB -token $LzPat
+                $null = Set-AwsCodeBuildCredentials -awsProfile $LzAccessRoleProfile -serverType "GITHUB" -token $LzPat
                 $fileprocessed = $true
             } else {
                 Write-LzHost $indent  "--------- Could not find GitCodeBuildToken.pat file! Please see install documentation"
