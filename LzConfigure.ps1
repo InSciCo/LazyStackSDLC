@@ -74,7 +74,7 @@ foreach($orgUnitName in $smf.$orgCode.AWS.OrgUnits) {
         }
     } else {
         Write-LzHost $indent  "- Found AWS OrgUnit" $orgUnitName
-        $ouIds.Add($orgUnitName, $ou.ID)
+        $ouIds.Add($orgUnitName, $ou.Id)
     }
 }
 $indent -= 2
@@ -190,7 +190,7 @@ foreach($sysCode in $smf.$orgCode.Systems.Keys) {
         $group = ($awsgroups.Groups | Where-Object GroupName -EQ "Administrators")
         if($null -eq $group) {
             Write-LzHost $indent  "- Creating Administrators group in the ${LzAcctName} account."
-            New-AwsGroup -awsProfile $LzAccessRoleProfile -groupName Administrators
+            $null = New-AwsGroup -awsProfile $LzAccessRoleProfile -groupName Administrators
         } else {
             Write-LzHost $indent  "- Found Administrators group in ${LzAcctName} account."
         }

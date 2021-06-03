@@ -180,10 +180,9 @@ function New-AwsOrgUnit {
         --parent-id $orgRootId `
         --name $ouName  `
         --profile $awsProfile  2>&1
-    
 
     if($null -ne $result -And $result -like "{*") {
-        return $result | ConvertFrom-Json 
+        return ($result | ConvertFrom-Json).OrganizationalUnit 
     }  
     throw ("New-AwsOrgUnit Error:" + $result)
 
