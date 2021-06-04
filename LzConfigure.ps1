@@ -248,7 +248,7 @@ foreach($sysCode in $smf.$orgCode.Systems.Keys) {
                         }
                         $done = $true
                     } catch {
-                        if($Error -match "Payer ID") {
+                        if($Error -match "*Payer ID*") {
                             Write-Host $indent "Note: Retrying ImportSourceCredentials due to 'Payer ID' issue."
                             $tryCount += 1
                             if($tryCount -gt 5) {
