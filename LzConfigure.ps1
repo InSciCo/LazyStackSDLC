@@ -238,14 +238,42 @@ foreach($sysCode in $smf.$orgCode.Systems.Keys) {
         do {
             if(Test-Path "GitCodeBuildToken.pat") {
                 $LzPat = Get-Content -Path GitCodeBuildToken.pat
-                $null = Set-AwsCodeBuildCredentials -awsProfile $LzAccessRoleProfile -serverType "GITHUB" -token $LzPat
+                $tryCount = 0
+                $done = $false
+                do {
+                    try {
+                        $null = Set-AwsCodeBuildCredentials -awsProfile $LzAccessRoleProfile -serverType "GITHUB" -token $LzPat
+                        if($tryCount -gt 0) {
+                            Write-Host $indent "Retry Successful"
+                        }
+                        $done = $true
+                    } catch {
+                        if($Error -match "Payer ID") {
+                            Write-Host $indent "Note: Retrying ImportSourceCredentials due to 'Payer ID' issue."
+                            $tryCount += 1
+                            if($tryCount -gt 5) {
+                                $done = $true 
+                                Write-LzHost $indent "Warning: ImportSourceCredentials operation failed due to AWS Payer ID issue."
+                                Write-LzHost $indent "Try rerunning this script in a few minutes, if the issue persits, please "
+                                Write-LzHost $indent "contact AWS regarding this reported problem:"
+                                Write-LzHost $indent "  - Subscription to CodeBUuild, ProductCode CodeBuild, required."
+                                Write-LzHost $indent "  - This occurred during ImportSourceCredentials in the ${LzAcctName} Account."
+                            } else {
+                                Start-Sleep -Seconds 10
+                            }
+                        } else {
+                            throw $Error
+                        }
+                    }
+                } until ($done)
+
                 $fileprocessed = $true
             } else {
-                Write-LzHost $indent  "--------- Could not find GitCodeBuildToken.pat file! Please see install documentation"
-                Write-LzHost $indent  "--------- on creating this file and then continue with this script. You may also stop"
-                Write-LzHost $indent  "--------- running this script now and rerun it later after creating the .pat file."
-                $ok= Read-YesNo "Continue?" -indent 8
-                if(!$ok) {
+                Write-LzHost $indent  "Warning: Could not find GitCodeBuildToken.pat file! Please see install documentation"
+                Write-LzHost $indent  "  on creating this file and then continue with this script. You may also stop"
+                Write-LzHost $indent  "  running this script now and rerun it later after creating the .pat file."
+                $tryAgain= Read-YesNo "Try Again?" -indent 8
+                if(!$tryAgain) {
                     exit
                 }
             }
