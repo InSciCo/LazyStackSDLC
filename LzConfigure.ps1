@@ -244,12 +244,12 @@ foreach($sysCode in $smf.$orgCode.Systems.Keys) {
                     try {
                         $null = Set-AwsCodeBuildCredentials -awsProfile $LzAccessRoleProfile -serverType "GITHUB" -token $LzPat
                         if($tryCount -gt 0) {
-                            Write-Host $indent "Retry Successful"
+                            Write-LzHost $indent "Retry Successful"
                         }
                         $done = $true
                     } catch {
                         if($Error -match "Payer ID") {
-                            Write-Host $indent "Note: Retrying ImportSourceCredentials due to 'Payer ID' issue."
+                            Write-LzHost $indent "Note: Retrying ImportSourceCredentials due to 'Payer ID' issue."
                             $tryCount += 1
                             if($tryCount -gt 5) {
                                 $done = $true 

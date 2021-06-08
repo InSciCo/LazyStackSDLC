@@ -72,7 +72,6 @@ function Read-AwsRegion {
 }
 function Read-AwsProfileName {
     param ([string]$prompt, [string]$default, [int]$indent=0)
-    Write-Host "default=" $default
     $indentstr = " " * $indent
     do {
         $inputvalue = (Read-String `
